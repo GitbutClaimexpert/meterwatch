@@ -40,6 +40,14 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH]', err.message, err.stack);
+  process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[REJECTION]', err);
+});
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Directory setup ───────────────────────────────────────────────────────────
