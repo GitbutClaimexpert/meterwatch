@@ -352,7 +352,7 @@ function CaptureScreen({ onRefresh }) {
     setError("");
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+        video: { facingMode: "environment" }
       });
       setStream(s);
       if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play(); }
