@@ -348,18 +348,17 @@ function CaptureScreen({ onRefresh }) {
 
   useEffect(() => () => stopStream(), [stopStream]);
 
-  const startCamera = async () => {
+  const startCamera = () => {
     setError("");
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-      setStream(s);
-      if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play(); }
-      setPhase("camera");
-    } catch {
-      setError("Camera access denied. Please enable camera permissions in your browser settings.");
-    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) processCapture(file);
+    };
+    input.click();
   };
 
   const capturePhoto = () => {
