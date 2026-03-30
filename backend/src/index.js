@@ -331,6 +331,25 @@ app.post("/api/compare", async (req, res) => {
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
 
 const PORT = process.env.PORT || 3001;
+// Serve built frontend
+const __frontendDist = path.join(__dirname, "../../frontend/dist");
+if (fs.existsSync(__frontendDist)) {
+  app.use(express.static(__frontendDist));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__frontendDist, "index.html"));
+  });
+  console.log(`[MeterWatch] Frontend → ${__frontendDist}`);
+} else {
+  console.warn("[MeterWatch] No frontend dist found — API only");
+}
+```
+
+**File 3: Railway Variables** — add:
+- `VITE_API_URL` = *(leave blank or remove it)* — since frontend and backend are now on the same origin, the API calls will work without it.
+
+Go edit `backend/railway.toml` first at:
+```
+https://github.com/GitbutClaimexpert/meterwatch/edit/main/backend/railway.toml
 app.listen(PORT, () => {
   console.log(`[MeterWatch] Backend :${PORT}`);
   console.log(`[MeterWatch] Images → ${IMAGES_DIR}`);
