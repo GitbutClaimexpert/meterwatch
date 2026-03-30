@@ -147,8 +147,17 @@ app.get("/api/images/:filename", (req, res) => {
   res.send(fileBuffer);
 });
 
-// Preview (no save)
+// Preview (no save) — also aliased as extract-only for compatibility
 app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No photo" });
+  try {
+    const imageHash = sha256hex(req.file.buffer);
+    const extraction = await extractReading(req.file.buffer, req.file.mimetype);
+    res.json({ imageHash, aiReading: extraction.reading, extraction });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
     const imageHash = sha256hex(req.file.buffer);
@@ -330,26 +339,19 @@ app.post("/api/compare", async (req, res) => {
 
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
 
-const PORT = process.env.PORT || 3001;
-// Serve built frontend
-const __frontendDist = path.join(__dirname, "../../frontend/dist");
-if (fs.existsSync(__frontendDist)) {
-  app.use(express.static(__frontendDist));
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__frontendDist, "index.html"));
+// Serve built frontend — must be after all API routes
+const FRONTEND_DIST = "/app/frontend/dist";
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(FRONTEND_DIST, "index.html"));
   });
-  console.log(`[MeterWatch] Frontend → ${__frontendDist}`);
+  console.log(`[MeterWatch] Frontend → ${FRONTEND_DIST}`);
 } else {
-  console.warn("[MeterWatch] No frontend dist found — API only");
+  console.warn("[MeterWatch] No frontend dist found — API only mode");
 }
-```
 
-**File 3: Railway Variables** — add:
-- `VITE_API_URL` = *(leave blank or remove it)* — since frontend and backend are now on the same origin, the API calls will work without it.
-
-Go edit `backend/railway.toml` first at:
-```
-https://github.com/GitbutClaimexpert/meterwatch/edit/main/backend/railway.toml
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`[MeterWatch] Backend :${PORT}`);
   console.log(`[MeterWatch] Images → ${IMAGES_DIR}`);
