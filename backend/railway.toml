@@ -1,6 +1,8 @@
-[build]
-builder = "nixpacks"
-buildCommand = "echo 'BUILD START' && ls /app && ls && pwd"
+# moved to repo root
+```
 
-[deploy]
-startCommand = "node src/index.js"
+Then we need to create a `railway.toml` at the repo root. Since you can't create new files via GitHub UI, let's use a workaround — edit the `README.md` and commit, but first:
+
+Can you create files on GitHub? Go to:
+```
+https://github.com/GitbutClaimexpert/meterwatch/new/main
