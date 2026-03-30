@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && cd /app/frontend && npm install && npm run build"
+buildCommand = "ls /app && ls /app/frontend || (echo 'no frontend' && exit 1)"
 
 [deploy]
 startCommand = "node src/index.js"
