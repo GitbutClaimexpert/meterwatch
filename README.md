@@ -185,3 +185,4 @@ Current setup uses a random per-device user ID stored in localStorage. For produ
 | GET  | `/api/verify/chain/:userId` | Full chain audit (admin) |
 | GET  | `/api/audit` | Audit event log |
 
+
