@@ -184,3 +184,4 @@ Current setup uses a random per-device user ID stored in localStorage. For produ
 | POST | `/api/compare` | Discrepancy analysis + dispute letter |
 | GET  | `/api/verify/chain/:userId` | Full chain audit (admin) |
 | GET  | `/api/audit` | Audit event log |
+
