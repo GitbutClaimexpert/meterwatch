@@ -210,8 +210,14 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       finalReading = aiReading;
       readingSource = "AI_CONFIRMED";
     } else {
-      fs.unlinkSync(imageDiskPath);
-      return res.status(422).json({ error: "Could not read meter. Please retake with display clearly visible.", aiNotes: extraction.rawText });
+      // AI couldn't read — accept manual entry if provided
+      if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
+        finalReading = userConfirmed;
+        readingSource = "MANUAL";
+      } else {
+        fs.unlinkSync(imageDiskPath);
+        return res.status(422).json({ error: "Please enter the meter reading manually.", aiNotes: extraction.rawText });
+      }
     }
 
     const last = db.getLastReading(req.userId);
