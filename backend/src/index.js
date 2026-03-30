@@ -104,7 +104,7 @@ async function extractReading(imageBuffer, mimeType) {
   "rawText": "what you see",
   "confidence": 0-100
 }
-Only return a number if you are certain of all digits.` }
+Return your best guess even if not 100% certain. Only return null if you cannot see any digits at all.` }
     ]}]
   });
   const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
