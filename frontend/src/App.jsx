@@ -297,8 +297,10 @@ function CaptureScreen({ onRefresh }) {
   const processCapture = async (file) => {
     const ts = Date.now();
     setCaptureTs(ts);
-    const url = URL.createObjectURL(file);
-    setCapturedBlob(file);
+    // Compress image before upload
+    const compressed = await compressImage(file, 1400);
+    const url = URL.createObjectURL(compressed);
+    setCapturedBlob(compressed);
     setCapturedUrl(url);
     setPhase("extracting");
     try {
