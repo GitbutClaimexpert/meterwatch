@@ -294,37 +294,7 @@ async function compressImage(file, maxSizePx = 1400) {
     img.src = url;
   });
 }
-async function compressImage(file, maxSizePx = 1400) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let w = img.width, h = img.height;
-      if (w > h && w > maxSizePx) { h = Math.round(h * maxSizePx / w); w = maxSizePx; }
-      else if (h > maxSizePx) { w = Math.round(w * maxSizePx / h); h = maxSizePx; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(blob => resolve(blob || file), "image/jpeg", 0.82);
-    };
-    img.onerror = () => resolve(file);
-    img.src = url;
-  });
-}
-```
 
-Then find:
-```
-const url = URL.createObjectURL(file);
-    setCapturedBlob(file);
-```
-
-Replace with:
-```
-const compressed = await compressImage(file, 1400);
-    const url = URL.createObjectURL(compressed);
-    setCapturedBlob(compressed);
 // ── Capture Screen ─────────────────────────────────────────────────────────────
 function CaptureScreen({ onRefresh }) {
   const [phase, setPhase] = useState("start");
