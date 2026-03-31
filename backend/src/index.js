@@ -6,6 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
+import sharp from "sharp";
 import { JsonDB } from "./db.js";
 
 process.on("uncaughtException", (err) => { console.error("[CRASH]", err.message, err.stack); });
@@ -19,7 +20,6 @@ const STMTS_DIR  = path.join(DATA_DIR, "statements");
 fs.mkdirSync(IMAGES_DIR, { recursive: true });
 fs.mkdirSync(STMTS_DIR,  { recursive: true });
 
-// Signing secret
 const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
   const f = path.join(DATA_DIR, ".signing_secret");
   if (fs.existsSync(f)) return fs.readFileSync(f, "utf8").trim();
@@ -35,9 +35,19 @@ function sha256hex(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
-// Database
-const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
+async function resizeImageBuffer(buffer, maxPx = 1600) {
+  try {
+    return await sharp(buffer)
+      .resize(maxPx, maxPx, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+  } catch (e) {
+    console.warn("[RESIZE] Failed, using original:", e.message);
+    return buffer;
+  }
+}
 
+const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = "claude-sonnet-4-20250514";
 
@@ -57,13 +67,14 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
   const timeDiff = Math.abs(Date.now() - clientTs);
   if (timeDiff > 5 * 60 * 1000) flags.push(`Timestamp gap: ${Math.round(timeDiff/1000)}s`);
 
-  const b64 = imageBuffer.toString("base64");
+  const resized = await resizeImageBuffer(imageBuffer, 1400);
+  const b64 = resized.toString("base64");
   let validation = {};
   try {
     const resp = await anthropic.messages.create({
       model: MODEL, max_tokens: 400,
       messages: [{ role: "user", content: [
-        { type: "image", source: { type: "base64", media_type: mimeType, data: b64 } },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: `Analyse this image. Return ONLY valid JSON:
 {
   "isElectricityMeter": boolean,
@@ -93,11 +104,12 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
 }
 
 async function extractReading(imageBuffer, mimeType) {
-  const b64 = imageBuffer.toString("base64");
+  const resized = await resizeImageBuffer(imageBuffer, 1400);
+  const b64 = resized.toString("base64");
   const resp = await anthropic.messages.create({
     model: MODEL, max_tokens: 250,
     messages: [{ role: "user", content: [
-      { type: "image", source: { type: "base64", media_type: mimeType, data: b64 } },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
       { type: "text", text: `Read the electricity meter. Return ONLY valid JSON:
 {
   "reading": number or null,
@@ -135,7 +147,6 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use((req, _res, next) => { req.userId = req.headers["x-user-id"] || "default"; next(); });
 
-// Serve images
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
@@ -147,7 +158,6 @@ app.get("/api/images/:filename", (req, res) => {
   res.send(fileBuffer);
 });
 
-// Preview (no save) — also aliased as extract-only for compatibility
 app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
@@ -166,7 +176,6 @@ app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Main capture
 app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   const serverTs = Date.now();
@@ -188,7 +197,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
     }
 
-    // Save image
     const imageFilename = `${imageHash}.jpg`;
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
@@ -198,7 +206,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(500).json({ error: "Image storage verification failed" });
     }
 
-    // Extract reading
     const extraction = await extractReading(fs.readFileSync(imageDiskPath), req.file.mimetype);
     const aiReading = extraction.reading;
 
@@ -210,7 +217,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       finalReading = aiReading;
       readingSource = "AI_CONFIRMED";
     } else {
-      // AI couldn't read — accept manual entry if provided
       if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
         finalReading = userConfirmed;
         readingSource = "MANUAL";
@@ -291,13 +297,15 @@ app.post("/api/statements/upload", upload.single("statement"), async (req, res) 
   if (!req.file) return res.status(400).json({ error: "No file" });
   try {
     const imageHash = sha256hex(req.file.buffer);
-    fs.writeFileSync(path.join(STMTS_DIR, `${imageHash}_stmt.jpg`), req.file.buffer);
-    const b64 = req.file.buffer.toString("base64");
+    // Resize before saving and sending to AI
+    const resized = await resizeImageBuffer(req.file.buffer, 1600);
+    fs.writeFileSync(path.join(STMTS_DIR, `${imageHash}_stmt.jpg`), resized);
+    const b64 = resized.toString("base64");
     const resp = await anthropic.messages.create({
       model: MODEL, max_tokens: 1200,
       system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.",
       messages: [{ role: "user", content: [
-        { type: "image", source: { type: "base64", media_type: req.file.mimetype, data: b64 } },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: `Parse this bill. Return JSON:
 {
   "accountNumber": "string or null",
