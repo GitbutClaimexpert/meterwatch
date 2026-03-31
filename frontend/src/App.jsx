@@ -318,12 +318,19 @@ function CaptureScreen({ onRefresh }) {
   const processCapture = async (file) => {
     const ts = Date.now();
     setCaptureTs(ts);
-    // Compress before upload to stay under API 5MB limit
-    const compressed = await compressImage(file, 1400);
-    const url = URL.createObjectURL(compressed);
-    setCapturedBlob(compressed);
-    setCapturedUrl(url);
     setPhase("extracting");
+    try {
+      // Compress before upload to stay under API 5MB limit
+      const compressed = await compressImage(file, 1400);
+      const url = URL.createObjectURL(compressed);
+      setCapturedBlob(compressed);
+      setCapturedUrl(url);
+    } catch (compressErr) {
+      // Fallback to original if compression fails
+      const url = URL.createObjectURL(file);
+      setCapturedBlob(file);
+      setCapturedUrl(url);
+    }
     try {
       const fd = new FormData();
       fd.append("photo", file, "meter.jpg");
@@ -345,8 +352,12 @@ function CaptureScreen({ onRefresh }) {
     input.type = "file";
     input.accept = "image/*";
     input.capture = "environment";
+    // Must append to DOM on iOS for file input to work reliably
+    input.style.display = "none";
+    document.body.appendChild(input);
     input.onchange = (e) => {
-      const file = e.target.files[0];
+      const file = e.target.files?.[0];
+      document.body.removeChild(input);
       if (file) processCapture(file);
     };
     input.click();
