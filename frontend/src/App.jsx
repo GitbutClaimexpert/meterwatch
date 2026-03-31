@@ -656,8 +656,10 @@ function UploadScreen({ statements, onRefresh }) {
   const processFile = async file => {
     setPhase("uploading"); setError("");
     try {
+      // Compress image before upload to stay under 5MB API limit
+      const compressed = file.type.startsWith("image/") ? await compressImage(file, 1600) : file;
       const fd = new FormData();
-      fd.append("statement", file, file.name);
+      fd.append("statement", compressed, file.name);
       const result = await api("POST", "/api/statements/upload", fd, true);
       setParsed(result); setPhase("done");
       onRefresh();
