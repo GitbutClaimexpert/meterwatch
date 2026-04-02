@@ -6,20 +6,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import sharp from "sharp";
 import { JsonDB } from "./db.js";
-
 process.on("uncaughtException", (err) => { console.error("[CRASH]", err.message, err.stack); });
 process.on("unhandledRejection", (err) => { console.error("[REJECTION]", err); });
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const DATA_DIR   = path.join(__dirname, "../../data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
 const STMTS_DIR  = path.join(DATA_DIR, "statements");
 fs.mkdirSync(IMAGES_DIR, { recursive: true });
 fs.mkdirSync(STMTS_DIR,  { recursive: true });
-
 const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
   const f = path.join(DATA_DIR, ".signing_secret");
   if (fs.existsSync(f)) return fs.readFileSync(f, "utf8").trim();
@@ -27,27 +22,15 @@ const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
   fs.writeFileSync(f, s, { mode: 0o600 });
   return s;
 })();
-
 function hmacSign(data) {
   return crypto.createHmac("sha256", SIGNING_SECRET).update(data).digest("hex");
 }
 function sha256hex(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
-
-async function resizeImageBuffer(buffer, maxPx = 1600) {
-  try {
-    return buffer;
-  } catch (e) {
-    console.warn("[RESIZE] Failed, using original:", e.message);
-    return buffer;
-  }
-}
-
 const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = "claude-sonnet-4-20250514";
-
 function auditLog(event, userId, details, ip) {
   db.insertAudit({
     server_ts: Date.now(), event,
@@ -57,15 +40,12 @@ function auditLog(event, userId, details, ip) {
     entry_hash: sha256hex(Buffer.from(JSON.stringify({ event, userId, details, ip, ts: Date.now() })))
   });
 }
-
 async function validateMeterImage(imageBuffer, mimeType, clientTs) {
   const flags = [];
   if (imageBuffer.length < 15 * 1024) flags.push("Image too small");
   const timeDiff = Math.abs(Date.now() - clientTs);
   if (timeDiff > 5 * 60 * 1000) flags.push(`Timestamp gap: ${Math.round(timeDiff/1000)}s`);
-
-  const resized = await resizeImageBuffer(imageBuffer, 1400);
-  const b64 = resized.toString("base64");
+  const b64 = imageBuffer.toString("base64");
   let validation = {};
   try {
     const resp = await anthropic.messages.create({
@@ -90,19 +70,15 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
   } catch (e) {
     validation = { appearsGenuine: true, notes: "Validation skipped: " + e.message };
   }
-
   if (validation.isScreenshot) flags.push("CRITICAL: Screenshot detected");
   if (validation.isPhotoOfScreen) flags.push("CRITICAL: Photo of a screen");
   if (validation.isEdited) flags.push("CRITICAL: Digital editing detected");
   if (validation.isPhotoOfPrintedDocument) flags.push("CRITICAL: Photo of printed document");
-
   const criticalFlags = flags.filter(f => f.startsWith("CRITICAL:"));
   return { flags, criticalFlags, validation };
 }
-
 async function extractReading(imageBuffer, mimeType) {
-  const resized = await resizeImageBuffer(imageBuffer, 1400);
-  const b64 = resized.toString("base64");
+  const b64 = imageBuffer.toString("base64");
   const resp = await anthropic.messages.create({
     model: MODEL, max_tokens: 250,
     messages: [{ role: "user", content: [
@@ -120,7 +96,6 @@ Return your best guess even if not 100% certain. Only return null if you cannot 
   try { return JSON.parse(text.replace(/```json?|```/g, "").trim()); }
   catch { return { reading: null, rawText: text.trim(), confidence: 0 }; }
 }
-
 function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gpsLat, gpsLng, prevChainHash }) {
   const payload = [
     `user_id=${userId}`, `server_ts=${serverTs}`, `image_hash=${imageHash}`,
@@ -132,18 +107,15 @@ function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gps
   const chainHash = sha256hex(Buffer.from(`${prevChainHash}:${imageHash}:${readingKwh}:${serverTs}:${userId}`));
   return { payload, hmac, chainHash };
 }
-
 const app = express();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => file.mimetype.startsWith("image/") ? cb(null, true) : cb(new Error("Images only"))
 });
-
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use((req, _res, next) => { req.userId = req.headers["x-user-id"] || "default"; next(); });
-
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
@@ -154,7 +126,6 @@ app.get("/api/images/:filename", (req, res) => {
   res.set("Content-Type", "image/jpeg");
   res.send(fileBuffer);
 });
-
 app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
@@ -163,7 +134,6 @@ app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
     res.json({ imageHash, aiReading: extraction.reading, extraction });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
@@ -172,7 +142,6 @@ app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) 
     res.json({ imageHash, aiReading: extraction.reading, extraction });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   const serverTs = Date.now();
@@ -180,20 +149,17 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat) : null;
   const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng) : null;
   const userConfirmed = req.body.confirmedReading ? parseFloat(req.body.confirmedReading) : null;
-
   auditLog("CAPTURE_ATTEMPT", req.userId, { bytes: req.file.size }, req.ip);
   try {
     const imageHash = sha256hex(req.file.buffer);
     if (db.findReadingByHash(imageHash)) {
       return res.status(409).json({ error: "This photo has already been submitted" });
     }
-
     const { flags, criticalFlags, validation } = await validateMeterImage(req.file.buffer, req.file.mimetype, clientTs);
     if (criticalFlags.length > 0) {
       auditLog("FRAUD_BLOCKED", req.userId, { criticalFlags }, req.ip);
       return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
     }
-
     const imageFilename = `${imageHash}.jpg`;
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
@@ -202,10 +168,8 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       fs.unlinkSync(imageDiskPath);
       return res.status(500).json({ error: "Image storage verification failed" });
     }
-
     const extraction = await extractReading(fs.readFileSync(imageDiskPath), req.file.mimetype);
     const aiReading = extraction.reading;
-
     let finalReading, readingSource;
     if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
       finalReading = userConfirmed;
@@ -222,17 +186,14 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
         return res.status(422).json({ error: "Please enter the meter reading manually.", aiNotes: extraction.rawText });
       }
     }
-
     const last = db.getLastReading(req.userId);
     if (last && finalReading < last.reading_kwh) flags.push(`Reading ${finalReading} below previous ${last.reading_kwh}`);
-
     const prevChainHash = last ? last.chain_hash : "genesis";
     const { payload: proofPayload, hmac: proofHmac, chainHash } = buildProof({
       userId: req.userId, serverTs, imageHash,
       readingKwh: finalReading, aiReadingKwh: aiReading,
       gpsLat, gpsLng, prevChainHash,
     });
-
     const id = `r_${serverTs}_${crypto.randomBytes(4).toString("hex")}`;
     const reading = {
       id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs,
@@ -246,7 +207,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
     };
     db.insertReading(reading);
     auditLog("CAPTURE_SUCCESS", req.userId, { id, reading: finalReading, hash: imageHash }, req.ip);
-
     res.json({
       id, reading: finalReading, aiReading, readingSource, serverTs,
       imageHash, chainHash, fraudFlags: flags,
@@ -259,7 +219,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 app.get("/api/readings", (req, res) => {
   const rows = db.getReadings(req.userId);
   res.json(rows.map(r => ({
@@ -270,7 +229,6 @@ app.get("/api/readings", (req, res) => {
     proof: { payload: r.proof_payload, hmac: r.proof_hmac },
   })));
 });
-
 app.get("/api/readings/:id/verify", (req, res) => {
   const row = db.findReadingById(req.params.id, req.userId);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -289,15 +247,12 @@ app.get("/api/readings/:id/verify", (req, res) => {
   checks.push({ name: "Hash chain", pass: row.prev_chain_hash === expectedPrev, detail: row.prev_chain_hash === expectedPrev ? "Chain intact" : "BROKEN" });
   res.json({ id: row.id, pass: checks.every(c => c.pass), checks, proofPayload: row.proof_payload });
 });
-
 app.post("/api/statements/upload", upload.single("statement"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file" });
   try {
     const imageHash = sha256hex(req.file.buffer);
-    // Resize before saving and sending to AI
-    const resized = await resizeImageBuffer(req.file.buffer, 1600);
-    fs.writeFileSync(path.join(STMTS_DIR, `${imageHash}_stmt.jpg`), resized);
-    const b64 = resized.toString("base64");
+    fs.writeFileSync(path.join(STMTS_DIR, `${imageHash}_stmt.jpg`), req.file.buffer);
+    const b64 = req.file.buffer.toString("base64");
     const resp = await anthropic.messages.create({
       model: MODEL, max_tokens: 1200,
       system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.",
@@ -326,11 +281,9 @@ app.post("/api/statements/upload", upload.single("statement"), async (req, res) 
     res.json({ id, imageHash, ...parsed });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 app.get("/api/statements", (req, res) => {
   res.json(db.getStatements(req.userId));
 });
-
 app.post("/api/compare", async (req, res) => {
   try {
     const readings = db.getReadings(req.userId, 60);
@@ -347,9 +300,7 @@ app.post("/api/compare", async (req, res) => {
     res.json(JSON.parse(text.replace(/```json?|```/g, "").trim()));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
-
 // Serve built frontend — must be after all API routes
 const FRONTEND_DIST = "/app/frontend/dist";
 if (fs.existsSync(FRONTEND_DIST)) {
@@ -361,7 +312,6 @@ if (fs.existsSync(FRONTEND_DIST)) {
 } else {
   console.warn("[MeterWatch] No frontend dist found — API only mode");
 }
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`[MeterWatch] Backend :${PORT}`);
