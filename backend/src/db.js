@@ -1,92 +1,152 @@
-/**
- * Simple JSON file-based database — no native compilation needed
- * Replaces better-sqlite3 for Railway compatibility
- */
 import fs from "fs";
 import path from "path";
 
 export class JsonDB {
   constructor(filePath) {
     this.filePath = filePath;
-    this.data = { readings: [], statements: [], audit_log: [] };
     this._load();
   }
 
   _load() {
-    if (fs.existsSync(this.filePath)) {
-      try {
+    try {
+      if (fs.existsSync(this.filePath)) {
         this.data = JSON.parse(fs.readFileSync(this.filePath, "utf8"));
-        if (!this.data.readings) this.data.readings = [];
-        if (!this.data.statements) this.data.statements = [];
-        if (!this.data.audit_log) this.data.audit_log = [];
-      } catch { this.data = { readings: [], statements: [], audit_log: [] }; }
+      } else {
+        this.data = { readings: [], audit: [], statements: [] };
+        this._save();
+      }
+    } catch (e) {
+      console.error("[DB] Load error:", e.message);
+      this.data = { readings: [], audit: [], statements: [] };
     }
   }
 
   _save() {
-    fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    try {
+      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+    } catch (e) {
+      console.error("[DB] Save error:", e.message);
+    }
   }
 
-  // Readings
-  insertReading(r) {
-    this.data.readings.push(r);
+  // ── Readings ──────────────────────────────────────────────
+
+  insertReading(reading) {
+    this._load();
+    this.data.readings.push(reading);
     this._save();
   }
 
   getReadings(userId, limit = 200) {
+    this._load();
     return this.data.readings
       .filter(r => r.user_id === userId)
       .sort((a, b) => b.server_ts - a.server_ts)
       .slice(0, limit);
   }
 
+  getAllReadings() {
+    this._load();
+    return this.data.readings.sort((a, b) => b.server_ts - a.server_ts);
+  }
+
   getLastReading(userId) {
-    return this.data.readings
+    this._load();
+    const rows = this.data.readings
       .filter(r => r.user_id === userId)
-      .sort((a, b) => b.server_ts - a.server_ts)[0] || null;
-  }
-
-  findReadingByHash(hash) {
-    return this.data.readings.find(r => r.image_hash === hash) || null;
-  }
-
-  findReadingById(id, userId) {
-    return this.data.readings.find(r => r.id === id && r.user_id === userId) || null;
+      .sort((a, b) => b.server_ts - a.server_ts);
+    return rows[0] || null;
   }
 
   getReadingsBefore(userId, ts) {
+    this._load();
     return this.data.readings
       .filter(r => r.user_id === userId && r.server_ts < ts)
       .sort((a, b) => b.server_ts - a.server_ts);
   }
 
-  getAllReadingsAsc(userId) {
-    return this.data.readings
-      .filter(r => r.user_id === userId)
-      .sort((a, b) => a.server_ts - b.server_ts);
+  findReadingByHash(hash) {
+    this._load();
+    return this.data.readings.find(r => r.image_hash === hash) || null;
   }
 
-  // Statements
-  insertStatement(s) {
-    this.data.statements.push(s);
+  findReadingById(id, userId) {
+    this._load();
+    return this.data.readings.find(r => r.id === id && r.user_id === userId) || null;
+  }
+
+  findReadingByIdAdmin(id) {
+    this._load();
+    return this.data.readings.find(r => r.id === id) || null;
+  }
+
+  deleteReading(id) {
+    this._load();
+    this.data.readings = this.data.readings.filter(r => r.id !== id);
+    this._save();
+  }
+
+  deleteAllReadings() {
+    this._load();
+    this.data.readings = [];
+    this._save();
+  }
+
+  // ── Statements ────────────────────────────────────────────
+
+  insertStatement(stmt) {
+    this._load();
+    if (!this.data.statements) this.data.statements = [];
+    this.data.statements.push(stmt);
     this._save();
   }
 
   getStatements(userId) {
+    this._load();
+    if (!this.data.statements) return [];
     return this.data.statements
       .filter(s => s.user_id === userId)
       .sort((a, b) => b.server_ts - a.server_ts);
   }
 
-  // Audit
-  insertAudit(entry) {
-    this.data.audit_log.push(entry);
+  getAllStatements() {
+    this._load();
+    if (!this.data.statements) return [];
+    return this.data.statements.sort((a, b) => b.server_ts - a.server_ts);
+  }
+
+  findStatementByIdAdmin(id) {
+    this._load();
+    if (!this.data.statements) return null;
+    return this.data.statements.find(s => s.id === id) || null;
+  }
+
+  deleteStatement(id) {
+    this._load();
+    if (!this.data.statements) return;
+    this.data.statements = this.data.statements.filter(s => s.id !== id);
     this._save();
   }
 
-  getAudit(limit = 500) {
-    return this.data.audit_log
-      .sort((a, b) => b.server_ts - a.server_ts)
-      .slice(0, limit);
+  // ── Audit ─────────────────────────────────────────────────
+
+  insertAudit(entry) {
+    this._load();
+    this.data.audit.push(entry);
+    if (this.data.audit.length > 1000) {
+      this.data.audit = this.data.audit.slice(-1000);
+    }
+    this._save();
+  }
+
+  getAudit() {
+    this._load();
+    return this.data.audit.sort((a, b) => b.server_ts - a.server_ts);
+  }
+
+  clearAudit() {
+    this._load();
+    this.data.audit = [];
+    this._save();
   }
 }

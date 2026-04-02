@@ -22,6 +22,7 @@ const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
   fs.writeFileSync(f, s, { mode: 0o600 });
   return s;
 })();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 function hmacSign(data) {
   return crypto.createHmac("sha256", SIGNING_SECRET).update(data).digest("hex");
 }
@@ -106,6 +107,13 @@ function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gps
   const chainHash = sha256hex(Buffer.from(prevChainHash + ":" + imageHash + ":" + readingKwh + ":" + serverTs + ":" + userId));
   return { payload, hmac, chainHash };
 }
+function requireAdmin(req, res, next) {
+  const token = req.headers["x-admin-token"];
+  if (!token || token !== hmacSign(ADMIN_PASSWORD)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
 const app = express();
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -115,6 +123,78 @@ const upload = multer({
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use((req, _res, next) => { req.userId = req.headers["x-user-id"] || "default"; next(); });
+
+// ── Admin auth ──────────────────────────────────────────────
+app.post("/api/admin/login", (req, res) => {
+  const { password } = req.body;
+  if (!password || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Wrong password" });
+  }
+  const token = hmacSign(ADMIN_PASSWORD);
+  res.json({ token });
+});
+
+// ── Admin: all readings (all users) ────────────────────────
+app.get("/api/admin/readings", requireAdmin, (req, res) => {
+  const rows = db.getAllReadings();
+  res.json(rows.map(r => ({
+    ...r,
+    fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
+    aiValidation: r.ai_validation || {},
+    imagePath: "/api/images/" + r.image_path,
+    proof: { payload: r.proof_payload, hmac: r.proof_hmac },
+  })));
+});
+
+// ── Admin: delete one reading ───────────────────────────────
+app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
+  const row = db.findReadingByIdAdmin(req.params.id);
+  if (!row) return res.status(404).json({ error: "Not found" });
+  const diskPath = path.join(IMAGES_DIR, row.image_path);
+  if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+  db.deleteReading(req.params.id);
+  auditLog("ADMIN_DELETE_READING", "admin", { id: req.params.id }, req.ip);
+  res.json({ ok: true });
+});
+
+// ── Admin: delete ALL readings ──────────────────────────────
+app.delete("/api/admin/readings", requireAdmin, (req, res) => {
+  const rows = db.getAllReadings();
+  rows.forEach(r => {
+    const diskPath = path.join(IMAGES_DIR, r.image_path);
+    if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+  });
+  db.deleteAllReadings();
+  auditLog("ADMIN_DELETE_ALL_READINGS", "admin", { count: rows.length }, req.ip);
+  res.json({ ok: true, deleted: rows.length });
+});
+
+// ── Admin: all audit logs ───────────────────────────────────
+app.get("/api/admin/audit", requireAdmin, (req, res) => {
+  res.json(db.getAudit());
+});
+
+// ── Admin: clear audit logs ─────────────────────────────────
+app.delete("/api/admin/audit", requireAdmin, (req, res) => {
+  db.clearAudit();
+  res.json({ ok: true });
+});
+
+// ── Admin: all statements ───────────────────────────────────
+app.get("/api/admin/statements", requireAdmin, (req, res) => {
+  res.json(db.getAllStatements());
+});
+
+// ── Admin: delete one statement ─────────────────────────────
+app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
+  const row = db.findStatementByIdAdmin(req.params.id);
+  if (!row) return res.status(404).json({ error: "Not found" });
+  const diskPath = path.join(STMTS_DIR, row.image_path);
+  if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+  db.deleteStatement(req.params.id);
+  res.json({ ok: true });
+});
+
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
