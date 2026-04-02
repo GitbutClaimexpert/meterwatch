@@ -367,6 +367,16 @@ app.post("/api/compare", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
+// Serve admin portal
+const ADMIN_HTML = path.join(__dirname, "admin.html");
+app.get("/admin.html", (_req, res) => {
+  if (fs.existsSync(ADMIN_HTML)) {
+    res.sendFile(ADMIN_HTML);
+  } else {
+    res.status(404).send("Admin portal not found");
+  }
+});
+
 const FRONTEND_DIST = "/app/frontend/dist";
 if (fs.existsSync(FRONTEND_DIST)) {
   app.use(express.static(FRONTEND_DIST));
