@@ -52,7 +52,7 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
       model: MODEL, max_tokens: 400,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-        { type: "text", text: `Analyse this image. Return ONLY valid JSON:
+        { type: "text", text: `Analyse this image. { type: "text", text: `You are validating a photo taken directly by a mobile phone camera of an electricity meter.
 {
   "isElectricityMeter": boolean,
   "hasVisibleMeterDisplay": boolean,
