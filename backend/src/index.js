@@ -40,11 +40,27 @@ function auditLog(event, userId, details, ip) {
     entry_hash: sha256hex(Buffer.from(JSON.stringify({ event, userId, details, ip, ts: Date.now() })))
   });
 }
+const VALIDATION_PROMPT = [
+  "You are validating a photo taken directly by a mobile phone camera of an electricity meter.",
+  "",
+  "IMPORTANT CONTEXT: Electricity meters are physical objects. They may have:",
+  "- Glass or plastic domes/covers (these cause reflections - this is NORMAL, not a screen)",
+  "- Analog dial displays with rotating wheels",
+  "- Digital LCD displays",
+  "- Weathering, dirt, scratches",
+  "",
+  "Only flag isPhotoOfScreen=true if you can see ACTUAL screen pixels, moire patterns, or a device bezel.",
+  "Glass reflections on a physical meter are NOT a screen.",
+  "Only flag isEdited=true if you see clear digital manipulation like cloning or impossible lighting.",
+  "",
+  'Return ONLY valid JSON with these exact keys:',
+  '{"isElectricityMeter":true,"hasVisibleMeterDisplay":true,"appearsGenuine":true,"isScreenshot":false,"isPhotoOfScreen":false,"isEdited":false,"isPhotoOfPrintedDocument":false,"confidencePercent":90,"notes":"brief note"}'
+].join("\n");
 async function validateMeterImage(imageBuffer, mimeType, clientTs) {
   const flags = [];
   if (imageBuffer.length < 15 * 1024) flags.push("Image too small");
   const timeDiff = Math.abs(Date.now() - clientTs);
-  if (timeDiff > 5 * 60 * 1000) flags.push(`Timestamp gap: ${Math.round(timeDiff/1000)}s`);
+  if (timeDiff > 5 * 60 * 1000) flags.push("Timestamp gap: " + Math.round(timeDiff/1000) + "s");
   const b64 = imageBuffer.toString("base64");
   let validation = {};
   try {
@@ -52,18 +68,7 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
       model: MODEL, max_tokens: 400,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-        { type: "text", text: `Analyse this image. { type: "text", text: `You are validating a photo taken directly by a mobile phone camera of an electricity meter.
-{
-  "isElectricityMeter": boolean,
-  "hasVisibleMeterDisplay": boolean,
-  "appearsGenuine": boolean,
-  "isScreenshot": boolean,
-  "isPhotoOfScreen": boolean,
-  "isEdited": boolean,
-  "isPhotoOfPrintedDocument": boolean,
-  "confidencePercent": 0-100,
-  "notes": "brief note"
-}` }
+        { type: "text", text: VALIDATION_PROMPT }
       ]}]
     });
     validation = JSON.parse(resp.content.filter(b => b.type === "text").map(b => b.text).join("").replace(/```json?|```/g, "").trim());
@@ -83,13 +88,7 @@ async function extractReading(imageBuffer, mimeType) {
     model: MODEL, max_tokens: 250,
     messages: [{ role: "user", content: [
       { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-      { type: "text", text: `Read the electricity meter. Return ONLY valid JSON:
-{
-  "reading": number or null,
-  "rawText": "what you see",
-  "confidence": 0-100
-}
-Return your best guess even if not 100% certain. Only return null if you cannot see any digits at all.` }
+      { type: "text", text: "Read the electricity meter. Return ONLY valid JSON:\n{\"reading\":number or null,\"rawText\":\"what you see\",\"confidence\":0-100}\nReturn your best guess even if not 100% certain. Only return null if you cannot see any digits at all." }
     ]}]
   });
   const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
@@ -98,13 +97,13 @@ Return your best guess even if not 100% certain. Only return null if you cannot 
 }
 function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gpsLat, gpsLng, prevChainHash }) {
   const payload = [
-    `user_id=${userId}`, `server_ts=${serverTs}`, `image_hash=${imageHash}`,
-    `reading_kwh=${readingKwh}`, `ai_reading_kwh=${aiReadingKwh ?? "null"}`,
-    `gps_lat=${gpsLat ?? "null"}`, `gps_lng=${gpsLng ?? "null"}`,
-    `prev_chain_hash=${prevChainHash}`,
+    "user_id=" + userId, "server_ts=" + serverTs, "image_hash=" + imageHash,
+    "reading_kwh=" + readingKwh, "ai_reading_kwh=" + (aiReadingKwh ?? "null"),
+    "gps_lat=" + (gpsLat ?? "null"), "gps_lng=" + (gpsLng ?? "null"),
+    "prev_chain_hash=" + prevChainHash,
   ].join("|");
   const hmac = hmacSign(payload);
-  const chainHash = sha256hex(Buffer.from(`${prevChainHash}:${imageHash}:${readingKwh}:${serverTs}:${userId}`));
+  const chainHash = sha256hex(Buffer.from(prevChainHash + ":" + imageHash + ":" + readingKwh + ":" + serverTs + ":" + userId));
   return { payload, hmac, chainHash };
 }
 const app = express();
@@ -160,7 +159,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       auditLog("FRAUD_BLOCKED", req.userId, { criticalFlags }, req.ip);
       return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
     }
-    const imageFilename = `${imageHash}.jpg`;
+    const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
     const writtenHash = sha256hex(fs.readFileSync(imageDiskPath));
@@ -187,14 +186,14 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       }
     }
     const last = db.getLastReading(req.userId);
-    if (last && finalReading < last.reading_kwh) flags.push(`Reading ${finalReading} below previous ${last.reading_kwh}`);
+    if (last && finalReading < last.reading_kwh) flags.push("Reading " + finalReading + " below previous " + last.reading_kwh);
     const prevChainHash = last ? last.chain_hash : "genesis";
     const { payload: proofPayload, hmac: proofHmac, chainHash } = buildProof({
       userId: req.userId, serverTs, imageHash,
       readingKwh: finalReading, aiReadingKwh: aiReading,
       gpsLat, gpsLng, prevChainHash,
     });
-    const id = `r_${serverTs}_${crypto.randomBytes(4).toString("hex")}`;
+    const id = "r_" + serverTs + "_" + crypto.randomBytes(4).toString("hex");
     const reading = {
       id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs,
       reading_kwh: finalReading, ai_reading_kwh: aiReading, reading_source: readingSource,
@@ -210,7 +209,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
     res.json({
       id, reading: finalReading, aiReading, readingSource, serverTs,
       imageHash, chainHash, fraudFlags: flags,
-      imagePath: `/api/images/${imageFilename}`,
+      imagePath: "/api/images/" + imageFilename,
       proof: { payload: proofPayload, hmac: proofHmac },
     });
   } catch (err) {
@@ -225,7 +224,7 @@ app.get("/api/readings", (req, res) => {
     ...r,
     fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
     aiValidation: r.ai_validation || {},
-    imagePath: `/api/images/${r.image_path}`,
+    imagePath: "/api/images/" + r.image_path,
     proof: { payload: r.proof_payload, hmac: r.proof_hmac },
   })));
 });
@@ -251,33 +250,20 @@ app.post("/api/statements/upload", upload.single("statement"), async (req, res) 
   if (!req.file) return res.status(400).json({ error: "No file" });
   try {
     const imageHash = sha256hex(req.file.buffer);
-    fs.writeFileSync(path.join(STMTS_DIR, `${imageHash}_stmt.jpg`), req.file.buffer);
+    fs.writeFileSync(path.join(STMTS_DIR, imageHash + "_stmt.jpg"), req.file.buffer);
     const b64 = req.file.buffer.toString("base64");
     const resp = await anthropic.messages.create({
       model: MODEL, max_tokens: 1200,
       system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.",
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-        { type: "text", text: `Parse this bill. Return JSON:
-{
-  "accountNumber": "string or null",
-  "billingPeriodStart": "YYYY-MM-DD or null",
-  "billingPeriodEnd": "YYYY-MM-DD or null",
-  "openingReading": number or null,
-  "closingReading": number or null,
-  "unitsConsumed": number or null,
-  "readingType": "ACTUAL or ESTIMATED or UNKNOWN",
-  "amountDue": number or null,
-  "currency": "ZAR",
-  "municipality": "string or null",
-  "notes": "key observations"
-}` }
+        { type: "text", text: "Parse this bill. Return JSON:\n{\"accountNumber\":\"string or null\",\"billingPeriodStart\":\"YYYY-MM-DD or null\",\"billingPeriodEnd\":\"YYYY-MM-DD or null\",\"openingReading\":\"number or null\",\"closingReading\":\"number or null\",\"unitsConsumed\":\"number or null\",\"readingType\":\"ACTUAL or ESTIMATED or UNKNOWN\",\"amountDue\":\"number or null\",\"currency\":\"ZAR\",\"municipality\":\"string or null\",\"notes\":\"key observations\"}" }
       ]}]
     });
     const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
     const parsed = JSON.parse(text.replace(/```json?|```/g, "").trim());
-    const id = `s_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
-    db.insertStatement({ id, user_id: req.userId, server_ts: Date.now(), image_hash: imageHash, image_path: `${imageHash}_stmt.jpg`, billing_start: parsed.billingPeriodStart, billing_end: parsed.billingPeriodEnd, opening_kwh: parsed.openingReading, closing_kwh: parsed.closingReading, units_consumed: parsed.unitsConsumed, reading_type: parsed.readingType, amount_due: parsed.amountDue, currency: parsed.currency || "ZAR", municipality: parsed.municipality, account_number: parsed.accountNumber, raw_json: JSON.stringify(parsed) });
+    const id = "s_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
+    db.insertStatement({ id, user_id: req.userId, server_ts: Date.now(), image_hash: imageHash, image_path: imageHash + "_stmt.jpg", billing_start: parsed.billingPeriodStart, billing_end: parsed.billingPeriodEnd, opening_kwh: parsed.openingReading, closing_kwh: parsed.closingReading, units_consumed: parsed.unitsConsumed, reading_type: parsed.readingType, amount_due: parsed.amountDue, currency: parsed.currency || "ZAR", municipality: parsed.municipality, account_number: parsed.accountNumber, raw_json: JSON.stringify(parsed) });
     res.json({ id, imageHash, ...parsed });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -290,30 +276,29 @@ app.post("/api/compare", async (req, res) => {
     const statements = db.getStatements(req.userId);
     if (!readings.length || !statements.length) return res.status(400).json({ error: "Need both readings and statements" });
     const rSummary = readings.map(r => ({ date: new Date(r.server_ts).toISOString().slice(0,10), reading_kwh: r.reading_kwh, source: r.reading_source }));
-    const sSummary = statements.map(s => ({ period: `${s.billing_start} to ${s.billing_end}`, opening_kwh: s.opening_kwh, closing_kwh: s.closing_kwh, units: s.units_consumed, readingType: s.reading_type, amountZAR: s.amount_due }));
+    const sSummary = statements.map(s => ({ period: s.billing_start + " to " + s.billing_end, opening_kwh: s.opening_kwh, closing_kwh: s.closing_kwh, units: s.units_consumed, readingType: s.reading_type, amountZAR: s.amount_due }));
     const resp = await anthropic.messages.create({
       model: MODEL, max_tokens: 2000,
       system: "South African municipal billing dispute analyst. Return only valid JSON, no markdown.",
-      messages: [{ role: "user", content: `Verified meter readings: ${JSON.stringify(rSummary)}\n\nMunicipal statements: ${JSON.stringify(sSummary)}\n\nReturn JSON: { "summary": "", "overallStatus": "OVERBILLED|ACCURATE|UNDERBILLED|INSUFFICIENT_DATA", "discrepancies": [{"period":"","municipalReading":null,"actualReading":null,"differenceKwh":null,"readingType":"","severity":"HIGH|MEDIUM|LOW","explanation":"","overbilledKwh":null,"estimatedRandOverbilled":null}], "totalOverbilledKwh":null,"totalRandOverbilled":null,"recommendedAction":"","disputeLetter":"" }` }]
+      messages: [{ role: "user", content: "Verified meter readings: " + JSON.stringify(rSummary) + "\n\nMunicipal statements: " + JSON.stringify(sSummary) + "\n\nReturn JSON: {\"summary\":\"\",\"overallStatus\":\"OVERBILLED|ACCURATE|UNDERBILLED|INSUFFICIENT_DATA\",\"discrepancies\":[{\"period\":\"\",\"municipalReading\":null,\"actualReading\":null,\"differenceKwh\":null,\"readingType\":\"\",\"severity\":\"HIGH|MEDIUM|LOW\",\"explanation\":\"\",\"overbilledKwh\":null,\"estimatedRandOverbilled\":null}],\"totalOverbilledKwh\":null,\"totalRandOverbilled\":null,\"recommendedAction\":\"\",\"disputeLetter\":\"\"}" }]
     });
     const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
     res.json(JSON.parse(text.replace(/```json?|```/g, "").trim()));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
-// Serve built frontend — must be after all API routes
 const FRONTEND_DIST = "/app/frontend/dist";
 if (fs.existsSync(FRONTEND_DIST)) {
   app.use(express.static(FRONTEND_DIST));
   app.get("*", (_req, res) => {
     res.sendFile(path.join(FRONTEND_DIST, "index.html"));
   });
-  console.log(`[MeterWatch] Frontend → ${FRONTEND_DIST}`);
+  console.log("[MeterWatch] Frontend -> " + FRONTEND_DIST);
 } else {
-  console.warn("[MeterWatch] No frontend dist found — API only mode");
+  console.warn("[MeterWatch] No frontend dist found - API only mode");
 }
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`[MeterWatch] Backend :${PORT}`);
-  console.log(`[MeterWatch] Images → ${IMAGES_DIR}`);
+  console.log("[MeterWatch] Backend :" + PORT);
+  console.log("[MeterWatch] Images -> " + IMAGES_DIR);
 });
