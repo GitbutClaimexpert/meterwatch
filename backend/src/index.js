@@ -38,7 +38,6 @@ function sha256hex(buffer) {
 async function resizeImageBuffer(buffer, maxPx = 1600) {
   try {
     return buffer;
-      .toBuffer();
   } catch (e) {
     console.warn("[RESIZE] Failed, using original:", e.message);
     return buffer;
