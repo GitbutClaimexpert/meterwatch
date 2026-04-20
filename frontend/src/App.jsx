@@ -180,7 +180,7 @@ export default function App() {
         {loading
           ? <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
               <div className="spinner" />
-              <div style={{ fontSize: 13, color: T.muted }}>Loading MeterWatchâ¦</div>
+              <div style={{ fontSize: 13, color: T.muted }}>Loading MeterWatch...</div>
             </div>
           : <Screen readings={readings} statements={statements} onRefresh={loadData} goTo={setTab} />
         }
@@ -197,12 +197,11 @@ export default function App() {
   );
 }
 
-// ââ Home Screen âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Home Screen ---
 function HomeScreen({ readings, statements, goTo }) {
   const latest = readings[0];
   const prev = readings[1];
   const consumed = latest && prev ? (latest.reading_kwh - prev.reading_kwh).toFixed(1) : null;
-  // Use server_ts (correct field name from backend)
   const latestTs = latest ? (latest.server_ts || latest.timestamp) : null;
 
   return (
@@ -217,11 +216,11 @@ function HomeScreen({ readings, statements, goTo }) {
 
       <div className="stat-row">
         <div className="stat">
-          <div className="stat-n" style={{ color: T.accent, fontSize: 22 }}>{latest ? latest.reading_kwh.toLocaleString() : "â"}</div>
+          <div className="stat-n" style={{ color: T.accent, fontSize: 22 }}>{latest ? latest.reading_kwh.toLocaleString() : "-"}</div>
           <div className="stat-l">Latest kWh</div>
         </div>
         <div className="stat">
-          <div className="stat-n" style={{ fontSize: 22 }}>{consumed ?? "â"}</div>
+          <div className="stat-n" style={{ fontSize: 22 }}>{consumed ?? "-"}</div>
           <div className="stat-l">Since Last</div>
         </div>
         <div className="stat">
@@ -240,13 +239,13 @@ function HomeScreen({ readings, statements, goTo }) {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div style={{ flex: 1 }}>
               <div className="card-value">{latest.reading_kwh.toLocaleString()}<span style={{ fontSize: 16, color: T.muted, fontWeight: 400 }}> kWh</span></div>
-              <div className="card-sub">{latestTs ? new Date(latestTs).toLocaleString("en-ZA") : "â"}</div>
+              <div className="card-sub">{latestTs ? new Date(latestTs).toLocaleString("en-ZA") : "-"}</div>
             </div>
             <span className="badge badge-ok"><Ico name="shield" size={11} /> Verified</span>
           </div>
           {latest.fraudFlags?.length > 0 && (
             <div style={{ marginTop: 10, padding: "8px 10px", background: "#1a1000", borderRadius: 8, fontSize: 12, color: T.accent }}>
-              â  {latest.fraudFlags.length} integrity flag{latest.fraudFlags.length > 1 ? "s" : ""} â tap History to review
+              &#9888; {latest.fraudFlags.length} integrity flag{latest.fraudFlags.length > 1 ? "s" : ""} - tap History to review
             </div>
           )}
         </div>
@@ -254,7 +253,7 @@ function HomeScreen({ readings, statements, goTo }) {
 
       {!latest && (
         <div className="alert alert-info">
-          <span className="alert-icon">ð¡</span>
+          <span className="alert-icon">&#128161;</span>
           <div>No readings yet. Tap <strong>Capture</strong> to photograph your meter and start tracking.</div>
         </div>
       )}
@@ -274,8 +273,7 @@ function HomeScreen({ readings, statements, goTo }) {
   );
 }
 
-
-// ââ Image compression utility âââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Image compression utility ---
 async function compressImage(file, maxSizePx = 1400) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -295,7 +293,7 @@ async function compressImage(file, maxSizePx = 1400) {
   });
 }
 
-// ââ Capture Screen âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Capture Screen ---
 function CaptureScreen({ onRefresh }) {
   const [phase, setPhase] = useState("start");
   const [capturedBlob, setCapturedBlob] = useState(null);
@@ -322,13 +320,11 @@ function CaptureScreen({ onRefresh }) {
     setCaptureTs(ts);
     setPhase("extracting");
     try {
-      // Compress before upload to stay under API 5MB limit
       const compressed = await compressImage(file, 1400);
       const url = URL.createObjectURL(compressed);
       setCapturedBlob(compressed);
       setCapturedUrl(url);
     } catch (compressErr) {
-      // Fallback to original if compression fails
       const url = URL.createObjectURL(file);
       setCapturedBlob(file);
       setCapturedUrl(url);
@@ -336,7 +332,6 @@ function CaptureScreen({ onRefresh }) {
     try {
       const fd = new FormData();
       fd.append("photo", file, "meter.jpg");
-      // FIX: use correct endpoint /api/readings/preview
       const result = await api("POST", "/api/readings/preview", fd, true);
       setAiReading(result.aiReading);
       setAiMeterNumber(result.meterNumber || null);
@@ -356,7 +351,6 @@ function CaptureScreen({ onRefresh }) {
     input.type = "file";
     input.accept = "image/*";
     input.capture = "environment";
-    // Must append to DOM on iOS for file input to work reliably
     input.style.display = "none";
     document.body.appendChild(input);
     input.onchange = (e) => {
@@ -413,7 +407,7 @@ function CaptureScreen({ onRefresh }) {
           <button className="btn btn-primary btn-full btn-lg" onClick={startCamera}>
             <Ico name="camera" size={20} /> Open Camera
           </button>
-          {error && <div className="alert alert-err" style={{ marginTop: 12 }}><span className="alert-icon">â</span><div>{error}</div></div>}
+          {error && <div className="alert alert-err" style={{ marginTop: 12 }}><span className="alert-icon">&#10007;</span><div>{error}</div></div>}
           <div style={{ marginTop: 20, padding: 16, background: T.surface, borderRadius: 12, border: `1px solid ${T.border}` }}>
             <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
               <div style={{ fontWeight: 500, color: T.text, marginBottom: 6 }}>How it works</div>
@@ -431,7 +425,7 @@ function CaptureScreen({ onRefresh }) {
           {capturedUrl && <img src={capturedUrl} alt="captured" style={{ width: "100%", borderRadius: 16, marginBottom: 16, border: `1px solid ${T.border}` }} />}
           <div className="card" style={{ textAlign: "center", padding: 28 }}>
             <div className="spinner" style={{ margin: "0 auto 12px" }} />
-            <div style={{ color: T.muted }}>AI reading your meterâ¦</div>
+            <div style={{ color: T.muted }}>AI reading your meter...</div>
           </div>
         </div>
       )}
@@ -442,7 +436,7 @@ function CaptureScreen({ onRefresh }) {
           <div className="card" style={{ marginBottom: 12 }}>
             <div className="card-label">AI Extracted Reading</div>
             <div style={{ fontFamily: T.mono, fontSize: 28, color: aiReading != null ? T.accent : T.danger, fontWeight: 600, marginBottom: 12 }}>
-              {aiReading != null ? `${aiReading.toLocaleString()} kWh` : "Could not read â enter manually"}
+              {aiReading != null ? `${aiReading.toLocaleString()} kWh` : "Could not read - enter manually"}
             </div>
             <div className="card-label">Confirm or Correct Reading (kWh)</div>
             <input
@@ -455,17 +449,17 @@ function CaptureScreen({ onRefresh }) {
               onChange={e => { setConfirmedReading(e.target.value); setError(""); }}
             />
             {error && <div style={{ color: T.danger, fontSize: 13, marginTop: 8 }}>{error}</div>}
-          <div className="card-label" style={{ marginTop: 12 }}>Meter Number</div>
-          <input
-            className="input-field"
-            type="text"
-            placeholder={aiMeterNumber ? "" : "Not detected — enter manually"}
-            value={meterNumber}
-            onChange={e => setMeterNumber(e.target.value)}
-          />
-          {!aiMeterNumber && <div style={{ fontSize: 11, color: T.accent, marginTop: 4 }}>⚠ Enter meter number manually</div>}
+            <div className="card-label" style={{ marginTop: 12 }}>Meter Number</div>
+            <input
+              className="input-field"
+              type="text"
+              placeholder={aiMeterNumber ? "" : "Not detected - enter manually"}
+              value={meterNumber}
+              onChange={e => setMeterNumber(e.target.value)}
+            />
+            {!aiMeterNumber && <div style={{ fontSize: 11, color: T.accent, marginTop: 4 }}>&#9888; Enter meter number manually</div>}
           </div>
-          {gps && <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginBottom: 10 }}>ð GPS: {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}</div>}
+          {gps && <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginBottom: 10 }}>&#128205; GPS: {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}</div>}
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn btn-primary btn-full" onClick={submitReading}><Ico name="check" size={18} /> Save Reading</button>
             <button className="btn btn-secondary" style={{ paddingLeft: 16, paddingRight: 16 }} onClick={reset}>Retake</button>
@@ -476,7 +470,7 @@ function CaptureScreen({ onRefresh }) {
       {phase === "submitting" && (
         <div className="card" style={{ textAlign: "center", padding: 32 }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
-          <div style={{ color: T.muted }}>Validating & saving readingâ¦</div>
+          <div style={{ color: T.muted }}>Validating & saving reading...</div>
           <div style={{ fontSize: 12, color: T.muted, marginTop: 8 }}>Server is verifying your photo for authenticity</div>
         </div>
       )}
@@ -500,7 +494,7 @@ function CaptureScreen({ onRefresh }) {
               <>
                 <div className="divider" />
                 <div className="card-label" style={{ color: T.accent }}>Integrity Flags</div>
-                {savedResult.fraudFlags.map((f, i) => <div key={i} style={{ fontSize: 12, color: T.accent, padding: "3px 0" }}>â  {f}</div>)}
+                {savedResult.fraudFlags.map((f, i) => <div key={i} style={{ fontSize: 12, color: T.accent, padding: "3px 0" }}>&#9888; {f}</div>)}
               </>
             )}
           </div>
@@ -510,7 +504,7 @@ function CaptureScreen({ onRefresh }) {
 
       {phase === "error" && (
         <div>
-          <div className="alert alert-err"><span className="alert-icon">â</span><div>{error}</div></div>
+          <div className="alert alert-err"><span className="alert-icon">&#10007;</span><div>{error}</div></div>
           <button className="btn btn-secondary btn-full" onClick={reset}>Try Again</button>
         </div>
       )}
@@ -518,7 +512,7 @@ function CaptureScreen({ onRefresh }) {
   );
 }
 
-// ââ History Screen âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- History Screen ---
 function HistoryScreen({ readings }) {
   const [selected, setSelected] = useState(null);
   const [verifying, setVerifying] = useState(false);
@@ -540,7 +534,7 @@ function HistoryScreen({ readings }) {
     const ts = r.server_ts || r.timestamp;
     return (
       <div className="screen slide-up">
-        <button className="btn btn-ghost" onClick={() => { setSelected(null); setVerifyResult(null); }} style={{ marginBottom: 16 }}>â Back</button>
+        <button className="btn btn-ghost" onClick={() => { setSelected(null); setVerifyResult(null); }} style={{ marginBottom: 16 }}>&#8592; Back</button>
 
         <div style={{ position: "relative", marginBottom: 12 }}>
           <img
@@ -555,7 +549,7 @@ function HistoryScreen({ readings }) {
           <div className="card-label">Reading</div>
           <div className="card-value">{r.reading_kwh.toLocaleString()} <span style={{ fontSize: 16, color: T.muted, fontWeight: 400 }}>kWh</span></div>
           <div className="card-sub">
-            {ts ? new Date(ts).toLocaleString("en-ZA") : "â"} Â· {r.reading_source?.replace("_", " ")}
+            {ts ? new Date(ts).toLocaleString("en-ZA") : "-"} &middot; {r.reading_source?.replace("_", " ")}
           </div>
           {r.ai_reading_kwh && r.ai_reading_kwh !== r.reading_kwh && (
             <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>
@@ -582,13 +576,13 @@ function HistoryScreen({ readings }) {
           <div className="card" style={{ borderColor: T.accentDark, marginBottom: 10 }}>
             <div className="card-label" style={{ color: T.accent }}>Integrity Flags</div>
             {r.fraudFlags.map((f, i) => (
-              <div key={i} style={{ fontSize: 12, color: T.accent, padding: "4px 0", borderBottom: i < r.fraudFlags.length - 1 ? `1px solid ${T.border}` : "none" }}>â  {f}</div>
+              <div key={i} style={{ fontSize: 12, color: T.accent, padding: "4px 0", borderBottom: i < r.fraudFlags.length - 1 ? `1px solid ${T.border}` : "none" }}>&#9888; {f}</div>
             ))}
           </div>
         )}
 
         <button className="btn btn-secondary btn-full" onClick={() => runVerify(r)} disabled={verifying} style={{ marginBottom: 10 }}>
-          {verifying ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Verifyingâ¦</> : <><Ico name="shield" size={16} /> Run Integrity Verification</>}
+          {verifying ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Verifying...</> : <><Ico name="shield" size={16} /> Run Integrity Verification</>}
         </button>
 
         {verifyResult && (
@@ -596,12 +590,12 @@ function HistoryScreen({ readings }) {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Ico name={verifyResult.pass ? "check" : "x"} size={18} color={verifyResult.pass ? T.success : T.danger} />
               <div style={{ fontWeight: 500, color: verifyResult.pass ? T.success : T.danger }}>
-                {verifyResult.pass ? "All checks passed â record is genuine" : "Verification failed â record may be compromised"}
+                {verifyResult.pass ? "All checks passed - record is genuine" : "Verification failed - record may be compromised"}
               </div>
             </div>
             {verifyResult.checks?.map((c, i) => (
               <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderTop: `1px solid ${T.border}`, alignItems: "flex-start" }}>
-                <span style={{ color: c.pass ? T.success : T.danger, flexShrink: 0, marginTop: 1 }}>{c.pass ? "â" : "â"}</span>
+                <span style={{ color: c.pass ? T.success : T.danger, flexShrink: 0, marginTop: 1 }}>{c.pass ? "✓" : "✗"}</span>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</div>
                   <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{c.detail}</div>
@@ -621,7 +615,7 @@ function HistoryScreen({ readings }) {
         <p className="screen-sub">{readings.length} verified readings</p>
       </div>
       {readings.length === 0
-        ? <div className="alert alert-info"><span className="alert-icon">ð</span><div>No readings yet. Capture your first meter reading to start your history.</div></div>
+        ? <div className="alert alert-info"><span className="alert-icon">&#128247;</span><div>No readings yet. Capture your first meter reading to start your history.</div></div>
         : readings.map((r, i) => {
           const ts = r.server_ts || r.timestamp;
           return (
@@ -631,20 +625,19 @@ function HistoryScreen({ readings }) {
                   <div className="chain-dot" />
                   {i < readings.length - 1 && <div className="chain-line" />}
                 </div>
-                {/* FIX: show actual meter thumbnail */}
                 <img
                   className="reading-thumb"
                   src={`${API}${r.imagePath}`}
                   alt="meter"
                   onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }}
                 />
-                <div className="reading-thumb-placeholder" style={{ display: "none" }}>â¡</div>
+                <div className="reading-thumb-placeholder" style={{ display: "none" }}>&#9889;</div>
                 <div className="reading-body">
                   <div className="reading-val">{r.reading_kwh.toLocaleString()} <span style={{ fontSize: 14, color: T.muted }}>kWh</span></div>
-                  <div className="reading-date">{ts ? new Date(ts).toLocaleDateString("en-ZA") : "â"} {ts ? new Date(ts).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : ""}</div>
+                  <div className="reading-date">{ts ? new Date(ts).toLocaleDateString("en-ZA") : "-"} {ts ? new Date(ts).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : ""}</div>
                   <div style={{ marginTop: 5 }}>
                     {r.fraudFlags?.length > 0
-                      ? <span className="badge badge-warn">â  {r.fraudFlags.length} flag{r.fraudFlags.length > 1 ? "s" : ""}</span>
+                      ? <span className="badge badge-warn">&#9888; {r.fraudFlags.length} flag{r.fraudFlags.length > 1 ? "s" : ""}</span>
                       : <span className="badge badge-ok"><Ico name="check" size={10} /> Verified</span>
                     }
                   </div>
@@ -659,7 +652,7 @@ function HistoryScreen({ readings }) {
   );
 }
 
-// ââ Upload Statement âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Upload Statement ---
 function UploadScreen({ statements, onRefresh }) {
   const [drag, setDrag] = useState(false);
   const [phase, setPhase] = useState("idle");
@@ -670,7 +663,6 @@ function UploadScreen({ statements, onRefresh }) {
   const processFile = async file => {
     setPhase("uploading"); setError("");
     try {
-      // Compress image before upload to stay under 5MB API limit
       const compressed = file.type.startsWith("image/") ? await compressImage(file, 1600) : file;
       const fd = new FormData();
       fd.append("statement", compressed, file.name);
@@ -696,7 +688,7 @@ function UploadScreen({ statements, onRefresh }) {
             onDragLeave={() => setDrag(false)}
             onDrop={onDrop}
             onClick={() => fileRef.current?.click()}>
-            <div className="dropzone-icon">ð</div>
+            <div className="dropzone-icon">&#128196;</div>
             <div className="dropzone-title">Tap to upload your bill</div>
             <div className="dropzone-sub">Photo, screenshot, or PDF of your statement</div>
           </div>
@@ -707,13 +699,13 @@ function UploadScreen({ statements, onRefresh }) {
       {phase === "uploading" && (
         <div className="card" style={{ textAlign: "center", padding: 32 }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
-          <div style={{ color: T.muted }}>AI parsing your statementâ¦</div>
+          <div style={{ color: T.muted }}>AI parsing your statement...</div>
         </div>
       )}
 
       {phase === "error" && (
         <div>
-          <div className="alert alert-err"><span className="alert-icon">â</span><div>{error}</div></div>
+          <div className="alert alert-err"><span className="alert-icon">&#10007;</span><div>{error}</div></div>
           <button className="btn btn-secondary btn-full" onClick={() => setPhase("idle")}>Try Again</button>
         </div>
       )}
@@ -723,29 +715,29 @@ function UploadScreen({ statements, onRefresh }) {
           <div className="alert alert-ok" style={{ marginBottom: 14 }}><Ico name="check" size={14} /><div>Statement parsed successfully</div></div>
           <div className="card" style={{ marginBottom: 10 }}>
             <div className="card-label">Billing Period</div>
-            <div style={{ fontFamily: T.mono, fontSize: 15 }}>{parsed.billingPeriodStart || "?"} â {parsed.billingPeriodEnd || "?"}</div>
+            <div style={{ fontFamily: T.mono, fontSize: 15 }}>{parsed.billingPeriodStart || "?"} - {parsed.billingPeriodEnd || "?"}</div>
           </div>
           <div className="stat-row">
-            <div className="stat"><div className="stat-n" style={{ fontSize: 20 }}>{parsed.openingReading?.toLocaleString() ?? "â"}</div><div className="stat-l">Opening kWh</div></div>
-            <div className="stat"><div className="stat-n" style={{ fontSize: 20 }}>{parsed.closingReading?.toLocaleString() ?? "â"}</div><div className="stat-l">Closing kWh</div></div>
+            <div className="stat"><div className="stat-n" style={{ fontSize: 20 }}>{parsed.openingReading?.toLocaleString() ?? "-"}</div><div className="stat-l">Opening kWh</div></div>
+            <div className="stat"><div className="stat-n" style={{ fontSize: 20 }}>{parsed.closingReading?.toLocaleString() ?? "-"}</div><div className="stat-l">Closing kWh</div></div>
           </div>
           <div className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div><div className="card-label">Reading Type</div><div style={{ fontFamily: T.mono, fontSize: 16, fontWeight: 600 }}>{parsed.readingType || "UNKNOWN"}</div></div>
               <span className={`badge ${parsed.readingType === "ESTIMATED" ? "badge-err" : parsed.readingType === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>
-                {parsed.readingType === "ESTIMATED" ? "â  Estimated" : parsed.readingType === "ACTUAL" ? "â Actual" : "? Unknown"}
+                {parsed.readingType === "ESTIMATED" ? "&#9888; Estimated" : parsed.readingType === "ACTUAL" ? "&#10003; Actual" : "? Unknown"}
               </span>
             </div>
           </div>
           <div className="card" style={{ marginBottom: 10 }}>
             <div className="card-label">Amount Due</div>
-            <div className="card-value">R {parsed.amountDue?.toFixed(2) ?? "â"}</div>
+            <div className="card-value">R {parsed.amountDue?.toFixed(2) ?? "-"}</div>
             {parsed.municipality && <div className="card-sub">{parsed.municipality}</div>}
             {parsed.accountNumber && <div className="card-sub">Account: {parsed.accountNumber}</div>}
           </div>
           {parsed.notes && (
             <div className="alert alert-info" style={{ marginBottom: 10 }}>
-              <span className="alert-icon">â¹</span><div style={{ fontSize: 12 }}>{parsed.notes}</div>
+              <span className="alert-icon">&#8505;</span><div style={{ fontSize: 12 }}>{parsed.notes}</div>
             </div>
           )}
           <button className="btn btn-secondary btn-full" onClick={() => setPhase("idle")}>Upload Another</button>
@@ -759,8 +751,8 @@ function UploadScreen({ statements, onRefresh }) {
             <div key={s.id} className="card" style={{ marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, fontFamily: T.mono }}>{s.billing_start || "?"} â {s.billing_end || "?"}</div>
-                  <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{s.municipality || "Municipal"} Â· R {s.amount_due?.toFixed(2) || "â"}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, fontFamily: T.mono }}>{s.billing_start || "?"} - {s.billing_end || "?"}</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{s.municipality || "Municipal"} &middot; R {s.amount_due?.toFixed(2) || "-"}</div>
                   {s.account_number && <div style={{ fontSize: 11, color: T.muted }}>Acc: {s.account_number}</div>}
                 </div>
                 <span className={`badge ${s.reading_type === "ESTIMATED" ? "badge-err" : s.reading_type === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>
@@ -775,7 +767,7 @@ function UploadScreen({ statements, onRefresh }) {
   );
 }
 
-// ââ Compare Screen âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Compare Screen ---
 function CompareScreen({ readings, statements }) {
   const [analysis, setAnalysis] = useState(null);
   const [phase, setPhase] = useState("idle");
@@ -813,7 +805,7 @@ function CompareScreen({ readings, statements }) {
         <div className="stat"><div className="stat-n">{statements.length}</div><div className="stat-l">Statements</div></div>
       </div>
 
-      {error && <div className="alert alert-err" style={{ marginBottom: 12 }}><span className="alert-icon">â</span><div>{error}</div></div>}
+      {error && <div className="alert alert-err" style={{ marginBottom: 12 }}><span className="alert-icon">&#10007;</span><div>{error}</div></div>}
 
       {phase === "idle" && (
         <button className="btn btn-primary btn-full btn-lg" onClick={runAnalysis}>
@@ -824,7 +816,7 @@ function CompareScreen({ readings, statements }) {
       {phase === "loading" && (
         <div className="card" style={{ textAlign: "center", padding: 32 }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
-          <div style={{ color: T.muted }}>AI analysing billing dataâ¦</div>
+          <div style={{ color: T.muted }}>AI analysing billing data...</div>
           <div style={{ fontSize: 12, color: T.muted, marginTop: 6 }}>Comparing your meter photos against statement readings</div>
         </div>
       )}
@@ -841,7 +833,6 @@ function CompareScreen({ readings, statements }) {
             <div style={{ fontSize: 14, color: T.muted, lineHeight: 1.6 }}>{analysis.summary}</div>
           </div>
 
-          {/* FIX: use correct field name totalOverbilledKwh from backend */}
           {(analysis.totalOverbilledKwh > 0 || analysis.estimatedOverbillingTotal > 0) && (
             <div className="card" style={{ background: "#1a0606", borderColor: "#5a1010", marginBottom: 12 }}>
               <div className="card-label" style={{ color: T.danger }}>Estimated Overbilling</div>
@@ -850,7 +841,7 @@ function CompareScreen({ readings, statements }) {
               </div>
               {analysis.totalRandOverbilled && (
                 <div style={{ fontFamily: T.mono, fontSize: 20, color: T.danger, marginTop: 6 }}>
-                  â R {analysis.totalRandOverbilled.toFixed(2)}
+                  approx. R {analysis.totalRandOverbilled.toFixed(2)}
                 </div>
               )}
               <div style={{ fontSize: 12, color: T.muted, marginTop: 6 }}>potentially incorrectly billed</div>
@@ -868,18 +859,15 @@ function CompareScreen({ readings, statements }) {
                       <span className={`badge ${d.severity === "HIGH" ? "badge-err" : d.severity === "MEDIUM" ? "badge-warn" : "badge-ok"}`}>{d.severity}</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      {/* FIX: use correct field names from backend: municipalReading, actualReading */}
-                      <div><div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: 1 }}>Bill says ({d.readingType})</div><div style={{ fontFamily: T.mono, fontSize: 15 }}>{d.municipalReading ?? d.statementReading ?? "â"}</div></div>
-                      <div><div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: 1 }}>Your reading</div><div style={{ fontFamily: T.mono, fontSize: 15 }}>{d.actualReading ?? "â"}</div></div>
+                      <div><div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: 1 }}>Bill says ({d.readingType})</div><div style={{ fontFamily: T.mono, fontSize: 15 }}>{d.municipalReading ?? d.statementReading ?? "-"}</div></div>
+                      <div><div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: 1 }}>Your reading</div><div style={{ fontFamily: T.mono, fontSize: 15 }}>{d.actualReading ?? "-"}</div></div>
                     </div>
-                    {/* FIX: use differenceKwh from backend */}
                     {(d.differenceKwh ?? d.difference) != null && (
                       <div style={{ fontFamily: T.mono, fontSize: 13, color: (d.differenceKwh ?? d.difference) > 0 ? T.danger : T.success, marginBottom: 6 }}>
-                        Î {(d.differenceKwh ?? d.difference) > 0 ? "+" : ""}{d.differenceKwh ?? d.difference} kWh
-                        {d.estimatedRandOverbilled ? ` Â· â R ${d.estimatedRandOverbilled.toFixed(2)}` : ""}
+                        &Delta; {(d.differenceKwh ?? d.difference) > 0 ? "+" : ""}{d.differenceKwh ?? d.difference} kWh
+                        {d.estimatedRandOverbilled ? ` approx. R ${d.estimatedRandOverbilled.toFixed(2)}` : ""}
                       </div>
                     )}
-                    {/* FIX: use explanation from backend */}
                     <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.5 }}>{d.explanation || d.description}</div>
                     {d.overbilledKwh > 0 && (
                       <div style={{ fontSize: 12, color: T.danger, marginTop: 4 }}>Overbilled: {d.overbilledKwh} kWh</div>
@@ -892,7 +880,7 @@ function CompareScreen({ readings, statements }) {
 
           {analysis.recommendedAction && (
             <div className="alert alert-warn" style={{ marginBottom: 14 }}>
-              <span className="alert-icon">â</span>
+              <span className="alert-icon">&#9888;</span>
               <div><strong>Next step:</strong><br /><span style={{ fontSize: 13 }}>{analysis.recommendedAction}</span></div>
             </div>
           )}
@@ -909,7 +897,7 @@ function CompareScreen({ readings, statements }) {
   );
 }
 
-// ââ Admin Screen âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- Admin Screen ---
 function AdminScreen({ readings, statements, onRefresh }) {
   const [audit, setAudit] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -948,7 +936,7 @@ function AdminScreen({ readings, statements, onRefresh }) {
       {activeTab === "readings" && (
         <div>
           {readings.length === 0
-            ? <div className="alert alert-info"><span className="alert-icon">ð</span><div>No readings yet.</div></div>
+            ? <div className="alert alert-info"><span className="alert-icon">&#128247;</span><div>No readings yet.</div></div>
             : readings.map(r => {
               const ts = r.server_ts || r.timestamp;
               return (
@@ -962,14 +950,14 @@ function AdminScreen({ readings, statements, onRefresh }) {
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: T.mono, fontSize: 18, fontWeight: 600 }}>{r.reading_kwh.toLocaleString()} kWh</div>
-                      <div style={{ fontSize: 11, color: T.muted }}>{ts ? new Date(ts).toLocaleString("en-ZA") : "â"}</div>
-                      <div style={{ fontSize: 11, color: T.muted }}>User: {r.user_id} Â· {r.reading_source}</div>
-                      {r.gps_lat && <div style={{ fontSize: 11, color: T.muted }}>ð {r.gps_lat.toFixed(4)}, {r.gps_lng.toFixed(4)}</div>}
+                      <div style={{ fontSize: 11, color: T.muted }}>{ts ? new Date(ts).toLocaleString("en-ZA") : "-"}</div>
+                      <div style={{ fontSize: 11, color: T.muted }}>User: {r.user_id} &middot; {r.reading_source}</div>
+                      {r.gps_lat && <div style={{ fontSize: 11, color: T.muted }}>&#128205; {r.gps_lat.toFixed(4)}, {r.gps_lng.toFixed(4)}</div>}
                     </div>
                     <div>
                       {r.fraudFlags?.length > 0
-                        ? <span className="badge badge-warn">â  {r.fraudFlags.length}</span>
-                        : <span className="badge badge-ok">â</span>
+                        ? <span className="badge badge-warn">&#9888; {r.fraudFlags.length}</span>
+                        : <span className="badge badge-ok">&#10003;</span>
                       }
                     </div>
                   </div>
@@ -983,12 +971,12 @@ function AdminScreen({ readings, statements, onRefresh }) {
       {activeTab === "statements" && (
         <div>
           {statements.length === 0
-            ? <div className="alert alert-info"><span className="alert-icon">ð</span><div>No statements uploaded yet.</div></div>
+            ? <div className="alert alert-info"><span className="alert-icon">&#128247;</span><div>No statements uploaded yet.</div></div>
             : statements.map(s => (
               <div key={s.id} className="card" style={{ marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 600 }}>{s.billing_start || "?"} â {s.billing_end || "?"}</div>
+                    <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 600 }}>{s.billing_start || "?"} - {s.billing_end || "?"}</div>
                     <div style={{ fontSize: 12, color: T.muted }}>{s.municipality || "Municipal"}</div>
                     {s.account_number && <div style={{ fontSize: 11, color: T.muted }}>Acc: {s.account_number}</div>}
                   </div>
@@ -997,11 +985,11 @@ function AdminScreen({ readings, statements, onRefresh }) {
                   </span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                  <div><div style={{ fontSize: 10, color: T.muted }}>Opening</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>{s.opening_kwh ?? "â"}</div></div>
-                  <div><div style={{ fontSize: 10, color: T.muted }}>Closing</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>{s.closing_kwh ?? "â"}</div></div>
-                  <div><div style={{ fontSize: 10, color: T.muted }}>Amount</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>R {s.amount_due?.toFixed(2) || "â"}</div></div>
+                  <div><div style={{ fontSize: 10, color: T.muted }}>Opening</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>{s.opening_kwh ?? "-"}</div></div>
+                  <div><div style={{ fontSize: 10, color: T.muted }}>Closing</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>{s.closing_kwh ?? "-"}</div></div>
+                  <div><div style={{ fontSize: 10, color: T.muted }}>Amount</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>R {s.amount_due?.toFixed(2) || "-"}</div></div>
                 </div>
-                <div style={{ fontSize: 10, color: T.muted, marginTop: 8 }}>User: {s.user_id} Â· {new Date(s.server_ts).toLocaleString("en-ZA")}</div>
+                <div style={{ fontSize: 10, color: T.muted, marginTop: 8 }}>User: {s.user_id} &middot; {new Date(s.server_ts).toLocaleString("en-ZA")}</div>
               </div>
             ))
           }
@@ -1016,7 +1004,7 @@ function AdminScreen({ readings, statements, onRefresh }) {
           {auditLoading
             ? <div style={{ textAlign: "center", padding: 24 }}><div className="spinner" style={{ margin: "0 auto" }} /></div>
             : audit.length === 0
-              ? <div className="alert alert-info"><span className="alert-icon">ð</span><div>No audit entries yet.</div></div>
+              ? <div className="alert alert-info"><span className="alert-icon">&#128247;</span><div>No audit entries yet.</div></div>
               : [...audit].reverse().map((a, i) => (
                 <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -1028,7 +1016,7 @@ function AdminScreen({ readings, statements, onRefresh }) {
                       <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>User: {a.user_id}</div>
                     </div>
                     <div style={{ fontSize: 10, color: T.muted, textAlign: "right" }}>
-                      {a.server_ts ? new Date(a.server_ts).toLocaleString("en-ZA") : "â"}
+                      {a.server_ts ? new Date(a.server_ts).toLocaleString("en-ZA") : "-"}
                     </div>
                   </div>
                   {a.details && (
