@@ -49,7 +49,7 @@ function auditLog(event, userId, details, ip) {
   });
 }
 
-// ââ AI timeout wrapper ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ AI timeout wrapper Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function withTimeout(promise, ms, label) {
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error("AI_TIMEOUT: " + label + " exceeded " + ms + "ms")), ms)
@@ -115,7 +115,7 @@ async function extractReading(imageBuffer, mimeType) {
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: [
-          "Read this electricity meter. Return ONLY valid JSON â no markdown, no extra text:",
+          "Read this electricity meter. Return ONLY valid JSON Ã¢ÂÂ no markdown, no extra text:",
           '{"reading": 12345, "meterNumber": "ABC123", "rawText": "what you see on the display", "confidence": 85}',
           "",
           "Rules:",
@@ -168,14 +168,14 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use((req, _res, next) => { req.userId = req.headers["x-user-id"] || "default"; next(); });
 
-// ââ Admin auth ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin auth Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post("/api/admin/login", (req, res) => {
   const { password } = req.body;
   if (!password || password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Wrong password" });
   res.json({ token: hmacSign(ADMIN_PASSWORD) });
 });
 
-// ââ Admin: all readings âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: all readings Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/admin/readings", requireAdmin, (req, res) => {
   const rows = db.getAllReadings();
   res.json(rows.map(r => ({
@@ -187,7 +187,7 @@ app.get("/api/admin/readings", requireAdmin, (req, res) => {
   })));
 });
 
-// ââ Admin: delete one reading âââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: delete one reading Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   const row = db.findReadingByIdAdmin(req.params.id);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -198,7 +198,7 @@ app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// ââ Admin: WIPE ALL data (readings + statements + audit) ââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: WIPE ALL data (readings + statements + audit) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.delete("/api/admin/wipe", requireAdmin, (req, res) => {
   try {
     // Delete all image files from disk
@@ -224,7 +224,7 @@ app.delete("/api/admin/wipe", requireAdmin, (req, res) => {
   }
 });
 
-// ââ Admin: delete all readings only ââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: delete all readings only Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.delete("/api/admin/readings", requireAdmin, (req, res) => {
   const rows = db.getAllReadings();
   rows.forEach(r => {
@@ -236,11 +236,11 @@ app.delete("/api/admin/readings", requireAdmin, (req, res) => {
   res.json({ ok: true, deleted: rows.length });
 });
 
-// ââ Admin: audit log âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: audit log Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/admin/audit", requireAdmin, (req, res) => { res.json(db.getAudit()); });
 app.delete("/api/admin/audit", requireAdmin, (req, res) => { db.clearAudit(); res.json({ ok: true }); });
 
-// ââ Admin: statements ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin: statements Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/admin/statements", requireAdmin, (req, res) => { res.json(db.getAllStatements()); });
 app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   const row = db.findStatementByIdAdmin(req.params.id);
@@ -251,7 +251,7 @@ app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// ââ Serve meter photo (with integrity hash header) ââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Serve meter photo (with integrity hash header) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
@@ -262,7 +262,7 @@ app.get("/api/images/:filename", (req, res) => {
   res.send(fileBuffer);
 });
 
-// ââ Preview / extract-only (no save) âââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Preview / extract-only (no save) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
@@ -281,7 +281,7 @@ app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ââ MAIN CAPTURE ENDPOINT âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ MAIN CAPTURE ENDPOINT Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
 
@@ -301,7 +301,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(409).json({ error: "This photo has already been submitted" });
     }
 
-    // ââ STEP 1: Save image to disk immediately (before any AI call) âââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 1: Save image to disk immediately (before any AI call) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     // This guarantees the photo is always preserved regardless of AI outcome
     const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
@@ -313,7 +313,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(500).json({ error: "Image storage verification failed" });
     }
 
-    // ââ STEP 2: Validate image authenticity (with timeout) ââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 2: Validate image authenticity (with timeout) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     const { flags, criticalFlags, validation } = await validateMeterImage(req.file.buffer, req.file.mimetype, clientTs);
 
     if (criticalFlags.length > 0) {
@@ -322,7 +322,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
     }
 
-    // ââ STEP 3: Extract reading + meter number (with timeout) âââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 3: Extract reading + meter number (with timeout) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let extraction = { reading: null, meterNumber: null, rawText: "", confidence: 0 };
     let aiTimedOut = false;
     try {
@@ -335,7 +335,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
     const aiReading     = extraction.reading;
     const aiMeterNumber = extraction.meterNumber;
 
-    // ââ STEP 4: Determine final reading value âââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 4: Determine final reading value Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let finalReading, readingSource;
     if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
       finalReading  = userConfirmed;
@@ -344,7 +344,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       finalReading  = aiReading;
       readingSource = "AI_CONFIRMED";
     } else {
-      // AI could not read â photo is already saved, ask frontend for manual entry
+      // AI could not read Ã¢ÂÂ photo is already saved, ask frontend for manual entry
       return res.status(202).json({
         status:         "manual_required",
         imageHash,
@@ -355,10 +355,10 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       });
     }
 
-    // ââ STEP 5: Determine final meter number ââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 5: Determine final meter number Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     const finalMeterNumber = manualMeterNumber || aiMeterNumber || null;
 
-    // ââ STEP 6: Chain + sign ââââââââââââââââââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 6: Chain + sign Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     if (finalReading < 0) flags.push("Negative reading");
     const last = db.getLastReading(req.userId);
     if (last && finalReading < last.reading_kwh) flags.push("Reading " + finalReading + " below previous " + last.reading_kwh);
@@ -369,7 +369,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       gpsLat, gpsLng, prevChainHash,
     });
 
-    // ââ STEP 7: Persist record ââââââââââââââââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ STEP 7: Persist record Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     const id = "r_" + serverTs + "_" + crypto.randomBytes(4).toString("hex");
     const reading = {
       id,
@@ -413,7 +413,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   }
 });
 
-// ââ PATCH: submit manual reading for a photo that AI could not read âââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ PATCH: submit manual reading for a photo that AI could not read Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
 
@@ -484,7 +484,7 @@ app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
   }
 });
 
-// ââ Get readings for user âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Get readings for user Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/readings", (req, res) => {
   const rows = db.getReadings(req.userId);
   res.json(rows.map(r => ({
@@ -496,7 +496,7 @@ app.get("/api/readings", (req, res) => {
   })));
 });
 
-// ââ Verify a single reading's integrity ââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Verify a single reading's integrity Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.get("/api/readings/:id/verify", (req, res) => {
   const row = db.findReadingById(req.params.id, req.userId);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -516,7 +516,7 @@ app.get("/api/readings/:id/verify", (req, res) => {
   res.json({ id: row.id, pass: checks.every(c => c.pass), checks, proofPayload: row.proof_payload });
 });
 
-// ââ Upload statement âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Upload statement Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post("/api/statements/upload", upload.single("statement"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file" });
   try {
@@ -544,7 +544,7 @@ app.post("/api/statements/upload", upload.single("statement"), async (req, res) 
 
 app.get("/api/statements", (req, res) => { res.json(db.getStatements(req.userId)); });
 
-// ââ Compare readings vs statement âââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Compare readings vs statement Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 app.post("/api/compare", async (req, res) => {
   try {
     const readings   = db.getReadings(req.userId, 60);
@@ -567,17 +567,21 @@ app.post("/api/compare", async (req, res) => {
 
 app.get("/api/audit", (_req, res) => { res.json(db.getAudit()); });
 
-// ââ Admin portal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Admin portal Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const ADMIN_HTML = path.join(__dirname, "admin.html");
 app.get("/admin.html", (_req, res) => {
   if (fs.existsSync(ADMIN_HTML)) res.sendFile(ADMIN_HTML);
   else res.status(404).send("Admin portal not found");
 });
 
-// ââ Serve frontend ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Serve frontend Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const FRONTEND_DIST = "/app/frontend/dist";
 if (fs.existsSync(FRONTEND_DIST)) {
-  app.use(express.static(FRONTEND_DIST));
+  // Serve static but exclude /admin.html so backend route handles it
+  app.use((req, res, next) => {
+    if (req.path === '/admin.html') return next();
+    express.static(FRONTEND_DIST)(req, res, next);
+  });
   app.get("*", (_req, res) => res.sendFile(path.join(FRONTEND_DIST, "index.html")));
   console.log("[MeterWatch] Frontend -> " + FRONTEND_DIST);
 } else {
