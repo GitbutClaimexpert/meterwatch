@@ -11,345 +11,285 @@
   .login-box { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; }
   .login-box h1 { color: #f5a623; font-size: 1.6rem; margin-bottom: 6px; }
   .login-box p { color: #888; font-size: 0.9rem; margin-bottom: 28px; }
-  input[type=password], input[type=text] { width: 100%; padding: 12px 16px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #e0e0e0; font-size: 1rem; margin-bottom: 14px; outline: none; }
-  input:focus { border-color: #f5a623; }
+  input[type=text], input[type=password] { width: 100%; padding: 12px 16px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #e0e0e0; font-size: 1rem; margin-bottom: 14px; }
+  input:focus { border-color: #f5a623; outline: none; }
   .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
   .btn:hover { opacity: 0.85; }
   .btn-primary { background: #f5a623; color: #000; }
-  .btn-danger { background: #e74c3c; color: #fff; }
-  .btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+  .btn-danger  { background: #e74c3c; color: #fff; }
+  .btn-sm      { padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
   .btn-sm-danger { background: #e74c3c; color: #fff; }
-  .btn-sm-gray { background: #2a2d3e; color: #ccc; }
-  .error { color: #e74c3c; font-size: 0.9rem; margin-top: 8px; }
+  .btn-sm-gray   { background: #2a2d3e; color: #ccc; }
+  .btn-sm-blue   { background: #2266cc; color: #fff; }
+  .btn-sm-wipe   { background: #cc0000; color: #fff; font-size: 0.85rem; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; }
+  .error  { color: #e74c3c; font-size: 0.9rem; margin-top: 8px; }
   .hidden { display: none; }
 
   /* Dashboard */
-  header { background: #1a1d2e; border-bottom: 1px solid #2a2d3e; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
-  header h1 { color: #f5a623; font-size: 1.3rem; }
-  header .logout { background: #2a2d3e; border: none; color: #ccc; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
-  header .logout:hover { background: #3a3d4e; }
-  .tabs { display: flex; gap: 4px; padding: 20px 24px 0; border-bottom: 1px solid #2a2d3e; }
-  .tab { padding: 10px 20px; background: none; border: none; color: #888; cursor: pointer; font-size: 0.95rem; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color 0.2s; }
-  .tab.active { color: #f5a623; border-bottom-color: #f5a623; }
-  .tab-content { padding: 24px; }
-  .section-actions { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-  .count-badge { background: #2a2d3e; color: #aaa; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; }
-
-  /* Cards */
-  .card { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
-  .card-header { padding: 16px 20px; display: flex; align-items: flex-start; gap: 16px; }
-  .meter-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #2a2d3e; flex-shrink: 0; cursor: pointer; }
-  .meter-thumb:hover { border-color: #f5a623; }
-  .card-info { flex: 1; }
-  .card-reading { font-size: 1.5rem; font-weight: 700; color: #fff; }
-  .card-meta { font-size: 0.8rem; color: #888; margin-top: 4px; line-height: 1.7; }
-  .card-meta span { margin-right: 12px; }
-  .card-actions { display: flex; gap: 8px; margin-top: 10px; }
-  .flag-badge { display: inline-block; background: #e74c3c22; color: #e74c3c; border: 1px solid #e74c3c44; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; margin: 2px; }
-  .flag-ok { background: #27ae6022; color: #27ae60; border-color: #27ae6044; }
-  .proof-box { background: #0f1117; border-top: 1px solid #2a2d3e; padding: 12px 20px; font-size: 0.72rem; color: #666; font-family: monospace; word-break: break-all; display: none; }
-
-  /* Audit */
-  .audit-row { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; }
-  .audit-event { font-weight: 700; font-size: 0.8rem; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
-  .ev-success { background: #27ae6022; color: #27ae60; }
-  .ev-attempt { background: #f5a62322; color: #f5a623; }
-  .ev-fraud { background: #e74c3c22; color: #e74c3c; }
-  .ev-admin { background: #8e44ad22; color: #9b59b6; }
-  .ev-other { background: #2a2d3e; color: #aaa; }
-  .audit-detail { font-size: 0.8rem; color: #888; }
-  .audit-ts { font-size: 0.75rem; color: #555; margin-top: 2px; }
-
-  /* Image modal */
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-  .modal img { max-width: 90vw; max-height: 90vh; border-radius: 12px; }
-  .modal-close { position: absolute; top: 20px; right: 24px; background: #fff; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 1.2rem; cursor: pointer; }
-
-  .empty { text-align: center; color: #555; padding: 60px 20px; font-size: 1rem; }
-  .spinner { text-align: center; color: #f5a623; padding: 40px; }
-
-  @media (max-width: 600px) {
-    .card-reading { font-size: 1.2rem; }
-    .tabs { overflow-x: auto; }
-    header h1 { font-size: 1.1rem; }
-  }
+  .dash { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: gap; gap: 12px; }
+  .dash-header h1 { color: #f5a623; font-size: 1.4rem; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab { padding: 8px 18px; border-radius: 8px; border: 1px solid #2a2d3e; background: #1a1d2e; color: #888; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+  .tab.active { background: #f5a623; color: #000; border-color: #f5a623; }
+  .card { background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { color: #f5a623; font-size: 1rem; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { background: #0f1117; color: #888; padding: 8px 10px; text-align: left; border-bottom: 1px solid #2a2d3e; }
+  td { padding: 8px 10px; border-bottom: 1px solid #1e2132; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+  .badge-green  { background: #1a3a1a; color: #4caf50; }
+  .badge-orange { background: #3a2a0a; color: #f5a623; }
+  .badge-red    { background: #3a0a0a; color: #e74c3c; }
+  .badge-blue   { background: #0a1a3a; color: #64b5f6; }
+  .wipe-bar { background: #2a0a0a; border: 1px solid #cc0000; border-radius: 10px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .wipe-bar p { color: #ff8888; font-size: 0.85rem; }
+  .photo-modal { display:none; position:fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center; }
+  .photo-modal.open { display:flex; }
+  .photo-inner { background:#1a1d2e;border-radius:12px;padding:20px;max-width:90vw;max-height:90vh;overflow:auto;text-align:center; }
+  .photo-inner img { max-width:100%;max-height:70vh;border-radius:8px;border:2px solid #2a2d3e; }
+  .photo-inner h3 { color:#f5a623;margin-bottom:8px; }
+  .photo-inner p  { color:#888;font-size:0.8rem;margin:4px 0;word-break:break-all; }
+  .close-btn { margin-top:14px;background:#2a2d3e;color:#ccc;border:none;padding:8px 20px;border-radius:6px;cursor:pointer; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- Login -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-box">
     <h1>⚡ MeterWatch</h1>
-    <p>Admin Portal — enter your password to continue</p>
-    <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    <p>Admin Portal</p>
+    <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')login()"/>
+    <button class="btn btn-primary" onclick="login()">Sign In</button>
     <div class="error hidden" id="loginErr"></div>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div class="hidden" id="dashboard">
-  <header>
+<!-- Dashboard -->
+<div class="dash hidden" id="dashboard">
+  <div class="dash-header">
     <h1>⚡ MeterWatch Admin</h1>
-    <button class="logout" onclick="doLogout()">Log out</button>
-  </header>
+    <button class="btn-sm btn-sm-gray" onclick="logout()">Sign Out</button>
+  </div>
+
+  <!-- WIPE BAR -->
+  <div class="wipe-bar">
+    <p>🗑️ <strong>Reset for testing:</strong> Permanently delete all readings, statements and audit logs</p>
+    <button class="btn-sm-wipe" onclick="wipeAll()">🗑️ Wipe All Data</button>
+  </div>
+
   <div class="tabs">
-    <button class="tab active" onclick="showTab('readings')">Readings</button>
-    <button class="tab" onclick="showTab('statements')">Statements</button>
-    <button class="tab" onclick="showTab('audit')">Audit Log</button>
+    <div class="tab active" onclick="showTab('readings',this)">Readings</div>
+    <div class="tab" onclick="showTab('statements',this)">Statements</div>
+    <div class="tab" onclick="showTab('audit',this)">Audit Log</div>
   </div>
 
-  <!-- READINGS TAB -->
-  <div class="tab-content" id="tab-readings">
-    <div class="section-actions">
-      <span class="count-badge" id="readingsCount">Loading...</span>
-      <button class="btn-sm btn-sm-gray" onclick="loadReadings()">↻ Refresh</button>
-      <button class="btn-sm btn-sm-danger" onclick="deleteAllReadings()">🗑 Delete All Readings</button>
+  <!-- Readings tab -->
+  <div id="tab-readings">
+    <div class="card">
+      <h2>Meter Readings</h2>
+      <div id="readingsTable">Loading...</div>
     </div>
-    <div id="readingsList"><div class="spinner">Loading...</div></div>
   </div>
 
-  <!-- STATEMENTS TAB -->
-  <div class="tab-content hidden" id="tab-statements">
-    <div class="section-actions">
-      <span class="count-badge" id="statementsCount">Loading...</span>
-      <button class="btn-sm btn-sm-gray" onclick="loadStatements()">↻ Refresh</button>
+  <!-- Statements tab -->
+  <div id="tab-statements" class="hidden">
+    <div class="card">
+      <h2>Uploaded Statements</h2>
+      <div id="statementsTable">Loading...</div>
     </div>
-    <div id="statementsList"><div class="spinner">Loading...</div></div>
   </div>
 
-  <!-- AUDIT TAB -->
-  <div class="tab-content hidden" id="tab-audit">
-    <div class="section-actions">
-      <span class="count-badge" id="auditCount">Loading...</span>
-      <button class="btn-sm btn-sm-gray" onclick="loadAudit()">↻ Refresh</button>
-      <button class="btn-sm btn-sm-danger" onclick="clearAudit()">🗑 Clear Audit Log</button>
+  <!-- Audit tab -->
+  <div id="tab-audit" class="hidden">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0">
+      <h2 style="margin:0">Audit Log</h2>
+      <button class="btn-sm btn-sm-danger" onclick="clearAudit()">Clear Log</button>
     </div>
-    <div id="auditList"><div class="spinner">Loading...</div></div>
+    <div class="card" style="margin-top:8px">
+      <div id="auditTable">Loading...</div>
+    </div>
   </div>
 </div>
 
-<!-- IMAGE MODAL -->
-<div class="modal hidden" id="imgModal" onclick="closeModal()">
-  <button class="modal-close" onclick="closeModal()">✕</button>
-  <img id="modalImg" src="" alt="Meter photo">
+<!-- Photo modal -->
+<div class="photo-modal" id="photoModal">
+  <div class="photo-inner">
+    <h3 id="photoTitle">Meter Photo</h3>
+    <p id="photoMeta"></p>
+    <img id="photoImg" src="" alt="Meter photo"/>
+    <p id="photoHash" style="color:#555;margin-top:8px"></p>
+    <button class="close-btn" onclick="closePhoto()">Close</button>
+  </div>
 </div>
 
 <script>
-const API = window.location.origin;
-let token = sessionStorage.getItem('mw_admin_token') || '';
+  const API = window.location.origin;
+  let TOKEN = sessionStorage.getItem('adminToken') || '';
 
-function eventClass(ev) {
-  if (ev.includes('SUCCESS')) return 'ev-success';
-  if (ev.includes('ATTEMPT')) return 'ev-attempt';
-  if (ev.includes('FRAUD') || ev.includes('ERROR')) return 'ev-fraud';
-  if (ev.includes('ADMIN')) return 'ev-admin';
-  return 'ev-other';
-}
+  function headers() {
+    return { 'Content-Type': 'application/json', 'x-admin-token': TOKEN };
+  }
 
-function fmtDate(ts) {
-  return new Date(ts).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' });
-}
+  async function login() {
+    const pw = document.getElementById('pwInput').value;
+    try {
+      const r = await fetch(API + '/api/admin/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Login failed');
+      TOKEN = d.token;
+      sessionStorage.setItem('adminToken', TOKEN);
+      document.getElementById('loginWrap').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      loadAll();
+    } catch(e) {
+      const el = document.getElementById('loginErr');
+      el.textContent = e.message;
+      el.classList.remove('hidden');
+    }
+  }
 
-async function doLogin() {
-  const pw = document.getElementById('pwInput').value;
-  const err = document.getElementById('loginErr');
-  err.classList.add('hidden');
-  try {
-    const r = await fetch(API + '/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw })
+  function logout() {
+    sessionStorage.removeItem('adminToken');
+    location.reload();
+  }
+
+  function showTab(name, el) {
+    ['readings','statements','audit'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
     });
-    const d = await r.json();
-    if (!r.ok) { err.textContent = d.error || 'Wrong password'; err.classList.remove('hidden'); return; }
-    token = d.token;
-    sessionStorage.setItem('mw_admin_token', token);
-    document.getElementById('loginWrap').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    if (name === 'audit') loadAudit();
+  }
+
+  async function loadAll() {
     loadReadings();
     loadStatements();
+  }
+
+  // ── Readings ──────────────────────────────────────────────────────────────
+  async function loadReadings() {
+    const el = document.getElementById('readingsTable');
+    try {
+      const r = await fetch(API + '/api/admin/readings', { headers: headers() });
+      const rows = await r.json();
+      if (!rows.length) { el.innerHTML = '<p style="color:#888;padding:10px">No readings yet.</p>'; return; }
+      el.innerHTML = '<table><thead><tr>' +
+        '<th>Date</th><th>Meter No.</th><th>Reading kWh</th><th>Source</th><th>Flags</th><th>Photo</th><th>Delete</th>' +
+        '</tr></thead><tbody>' +
+        rows.map(r => {
+          const d   = new Date(r.server_ts).toLocaleString('en-ZA');
+          const src = r.reading_source || 'UNKNOWN';
+          const srcBadge = src === 'AI_CONFIRMED' ? 'badge-green' : src === 'MANUAL' ? 'badge-blue' : 'badge-orange';
+          const flags = (r.fraudFlags||[]).length ? '<span class="badge badge-red">' + r.fraudFlags.length + ' flag(s)</span>' : '<span class="badge badge-green">Clean</span>';
+          return '<tr>' +
+            '<td>' + d + '</td>' +
+            '<td>' + (r.meter_number || '<span style="color:#555">—</span>') + '</td>' +
+            '<td><strong>' + (r.reading_kwh ?? '?') + '</strong></td>' +
+            '<td><span class="badge ' + srcBadge + '">' + src + '</span></td>' +
+            '<td>' + flags + '</td>' +
+            '<td><button class="btn-sm btn-sm-blue" onclick="viewPhoto(' + JSON.stringify(r.id) + ',' + JSON.stringify(r.imagePath) + ',' + JSON.stringify(r.image_hash) + ',' + JSON.stringify(d) + ',' + JSON.stringify(r.reading_kwh) + ',' + JSON.stringify(r.meter_number||'') + ')">📷</button></td>' +
+            '<td><button class="btn-sm btn-sm-danger" onclick="deleteReading(' + JSON.stringify(r.id) + ')">✕</button></td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table>';
+    } catch(e) { el.innerHTML = '<p style="color:#e74c3c">' + e.message + '</p>'; }
+  }
+
+  async function deleteReading(id) {
+    if (!confirm('Delete this reading?')) return;
+    await fetch(API + '/api/admin/readings/' + id, { method: 'DELETE', headers: headers() });
+    loadReadings();
+  }
+
+  // ── Photo viewer ──────────────────────────────────────────────────────────
+  function viewPhoto(id, path, hash, date, reading, meterNo) {
+    document.getElementById('photoTitle').textContent = 'Meter Photo';
+    document.getElementById('photoMeta').textContent =
+      date + '  |  Reading: ' + (reading ?? '?') + ' kWh  |  Meter No: ' + (meterNo || 'unknown');
+    document.getElementById('photoHash').textContent = 'SHA-256: ' + hash;
+    document.getElementById('photoImg').src = API + path;
+    document.getElementById('photoModal').classList.add('open');
+  }
+
+  function closePhoto() {
+    document.getElementById('photoModal').classList.remove('open');
+    document.getElementById('photoImg').src = '';
+  }
+
+  // ── Wipe all data ─────────────────────────────────────────────────────────
+  async function wipeAll() {
+    if (!confirm('DELETE ALL readings, statements and audit logs?\n\nThis permanently removes all data and images. Cannot be undone.')) return;
+    try {
+      const r = await fetch(API + '/api/admin/wipe', { method: 'DELETE', headers: headers() });
+      const d = await r.json();
+      alert(d.message || 'Done');
+      loadAll();
+      loadAudit();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── Statements ────────────────────────────────────────────────────────────
+  async function loadStatements() {
+    const el = document.getElementById('statementsTable');
+    try {
+      const r = await fetch(API + '/api/admin/statements', { headers: headers() });
+      const rows = await r.json();
+      if (!rows.length) { el.innerHTML = '<p style="color:#888;padding:10px">No statements yet.</p>'; return; }
+      el.innerHTML = '<table><thead><tr><th>Date</th><th>Account</th><th>Period</th><th>Units</th><th>Type</th><th>Amount</th><th>Delete</th></tr></thead><tbody>' +
+        rows.map(s => '<tr>' +
+          '<td>' + new Date(s.server_ts).toLocaleString('en-ZA') + '</td>' +
+          '<td>' + (s.account_number||'—') + '</td>' +
+          '<td>' + (s.billing_start||'?') + ' → ' + (s.billing_end||'?') + '</td>' +
+          '<td>' + (s.units_consumed||'?') + ' kWh</td>' +
+          '<td><span class="badge ' + (s.reading_type==='ESTIMATED'?'badge-orange':'badge-green') + '">' + (s.reading_type||'?') + '</span></td>' +
+          '<td>R ' + (s.amount_due||'?') + '</td>' +
+          '<td><button class="btn-sm btn-sm-danger" onclick="deleteStatement(' + JSON.stringify(s.id) + ')">✕</button></td>' +
+          '</tr>'
+        ).join('') + '</tbody></table>';
+    } catch(e) { el.innerHTML = '<p style="color:#e74c3c">' + e.message + '</p>'; }
+  }
+
+  async function deleteStatement(id) {
+    if (!confirm('Delete this statement?')) return;
+    await fetch(API + '/api/admin/statements/' + id, { method: 'DELETE', headers: headers() });
+    loadStatements();
+  }
+
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  async function loadAudit() {
+    const el = document.getElementById('auditTable');
+    try {
+      const r = await fetch(API + '/api/admin/audit', { headers: headers() });
+      const rows = await r.json();
+      if (!rows.length) { el.innerHTML = '<p style="color:#888;padding:10px">No audit entries.</p>'; return; }
+      el.innerHTML = '<table><thead><tr><th>Time</th><th>Event</th><th>User</th><th>Details</th><th>IP</th></tr></thead><tbody>' +
+        rows.slice().reverse().map(a => '<tr>' +
+          '<td>' + new Date(a.server_ts).toLocaleString('en-ZA') + '</td>' +
+          '<td><span class="badge ' + (a.event.includes('ERROR')||a.event.includes('BLOCKED')?'badge-red':a.event.includes('SUCCESS')?'badge-green':'badge-orange') + '">' + a.event + '</span></td>' +
+          '<td>' + (a.user_id||'—') + '</td>' +
+          '<td style="font-size:0.75rem;color:#888">' + (a.details||'') + '</td>' +
+          '<td>' + (a.ip||'—') + '</td>' +
+          '</tr>'
+        ).join('') + '</tbody></table>';
+    } catch(e) { el.innerHTML = '<p style="color:#e74c3c">' + e.message + '</p>'; }
+  }
+
+  async function clearAudit() {
+    if (!confirm('Clear all audit log entries?')) return;
+    await fetch(API + '/api/admin/audit', { method: 'DELETE', headers: headers() });
     loadAudit();
-  } catch(e) {
-    err.textContent = 'Connection error: ' + e.message;
-    err.classList.remove('hidden');
   }
-}
 
-function doLogout() {
-  token = '';
-  sessionStorage.removeItem('mw_admin_token');
-  document.getElementById('dashboard').classList.add('hidden');
-  document.getElementById('loginWrap').classList.remove('hidden');
-  document.getElementById('pwInput').value = '';
-}
-
-function adminHeaders() {
-  return { 'x-admin-token': token };
-}
-
-function showTab(name) {
-  ['readings','statements','audit'].forEach(t => {
-    document.getElementById('tab-' + t).classList.add('hidden');
-    document.querySelectorAll('.tab')[['readings','statements','audit'].indexOf(t)].classList.remove('active');
-  });
-  document.getElementById('tab-' + name).classList.remove('hidden');
-  document.querySelectorAll('.tab')[['readings','statements','audit'].indexOf(name)].classList.add('active');
-}
-
-async function loadReadings() {
-  const el = document.getElementById('readingsList');
-  el.innerHTML = '<div class="spinner">Loading...</div>';
-  try {
-    const r = await fetch(API + '/api/admin/readings', { headers: adminHeaders() });
-    if (r.status === 401) { doLogout(); return; }
-    const rows = await r.json();
-    document.getElementById('readingsCount').textContent = rows.length + ' reading' + (rows.length !== 1 ? 's' : '');
-    if (!rows.length) { el.innerHTML = '<div class="empty">No readings yet</div>'; return; }
-    el.innerHTML = rows.map(r => {
-      const flags = Array.isArray(r.fraudFlags) ? r.fraudFlags : [];
-      const flagHtml = flags.length
-        ? flags.map(f => '<span class="flag-badge">' + f + '</span>').join('')
-        : '<span class="flag-badge flag-ok">✓ No flags</span>';
-      const imgSrc = API + r.imagePath;
-      return '<div class="card" id="card-' + r.id + '">' +
-        '<div class="card-header">' +
-          '<img class="meter-thumb" src="' + imgSrc + '" onclick="openModal(\'' + imgSrc + '\')" title="Click to enlarge">' +
-          '<div class="card-info">' +
-            '<div class="card-reading">' + (r.reading_kwh || '—') + ' kWh</div>' +
-            '<div class="card-meta">' +
-              '<span>📅 ' + fmtDate(r.server_ts) + '</span>' +
-              '<span>👤 ' + (r.user_id || 'unknown') + '</span>' +
-              '<span>🤖 ' + (r.reading_source || '—') + '</span>' +
-              (r.gps_lat ? '<span>📍 ' + r.gps_lat.toFixed(4) + ', ' + r.gps_lng.toFixed(4) + '</span>' : '') +
-            '</div>' +
-            '<div style="margin-top:6px">' + flagHtml + '</div>' +
-            '<div class="card-actions">' +
-              '<button class="btn-sm btn-sm-gray" onclick="toggleProof(\'' + r.id + '\')">🔐 Proof</button>' +
-              '<button class="btn-sm btn-sm-danger" onclick="deleteReading(\'' + r.id + '\')">🗑 Delete</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="proof-box" id="proof-' + r.id + '">' +
-          '<strong>Proof payload:</strong><br>' + (r.proof && r.proof.payload ? r.proof.payload : 'N/A') + '<br><br>' +
-          '<strong>HMAC:</strong><br>' + (r.proof && r.proof.hmac ? r.proof.hmac : 'N/A') + '<br><br>' +
-          '<strong>Image SHA-256:</strong><br>' + (r.image_hash || 'N/A') +
-        '</div>' +
-      '</div>';
-    }).join('');
-  } catch(e) {
-    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  // Auto-login if token in session
+  if (TOKEN) {
+    document.getElementById('loginWrap').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadAll();
   }
-}
-
-async function loadStatements() {
-  const el = document.getElementById('statementsList');
-  el.innerHTML = '<div class="spinner">Loading...</div>';
-  try {
-    const r = await fetch(API + '/api/admin/statements', { headers: adminHeaders() });
-    if (r.status === 401) { doLogout(); return; }
-    const rows = await r.json();
-    document.getElementById('statementsCount').textContent = rows.length + ' statement' + (rows.length !== 1 ? 's' : '');
-    if (!rows.length) { el.innerHTML = '<div class="empty">No statements uploaded yet</div>'; return; }
-    el.innerHTML = rows.map(s => {
-      const parsed = s.raw_json ? JSON.parse(s.raw_json) : {};
-      return '<div class="card">' +
-        '<div class="card-header">' +
-          '<div class="card-info">' +
-            '<div class="card-reading" style="font-size:1.1rem">' + (s.municipality || 'Municipality unknown') + '</div>' +
-            '<div class="card-meta">' +
-              '<span>📅 Uploaded: ' + fmtDate(s.server_ts) + '</span>' +
-              '<span>📋 Period: ' + (s.billing_start || '?') + ' → ' + (s.billing_end || '?') + '</span>' +
-              '<span>⚡ Units: ' + (s.units_consumed || '?') + ' kWh</span>' +
-              '<span>💰 Amount: R' + (s.amount_due || '?') + '</span>' +
-              '<span>📖 Type: ' + (s.reading_type || '?') + '</span>' +
-              '<span>👤 ' + (s.user_id || 'unknown') + '</span>' +
-            '</div>' +
-            '<div class="card-actions" style="margin-top:10px">' +
-              '<button class="btn-sm btn-sm-danger" onclick="deleteStatement(\'' + s.id + '\')">🗑 Delete</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  } catch(e) {
-    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
-  }
-}
-
-async function loadAudit() {
-  const el = document.getElementById('auditList');
-  el.innerHTML = '<div class="spinner">Loading...</div>';
-  try {
-    const r = await fetch(API + '/api/admin/audit', { headers: adminHeaders() });
-    if (r.status === 401) { doLogout(); return; }
-    const rows = await r.json();
-    document.getElementById('auditCount').textContent = rows.length + ' entries';
-    if (!rows.length) { el.innerHTML = '<div class="empty">Audit log is empty</div>'; return; }
-    el.innerHTML = rows.map(a => {
-      let detail = '';
-      try { detail = JSON.stringify(JSON.parse(a.details), null, 0).slice(0, 120); } catch { detail = a.details || ''; }
-      return '<div class="audit-row">' +
-        '<span class="audit-event ' + eventClass(a.event) + '">' + a.event + '</span>' +
-        '<div>' +
-          '<div class="audit-detail">' + detail + (a.ip ? ' · IP: ' + a.ip : '') + '</div>' +
-          '<div class="audit-ts">' + fmtDate(a.server_ts) + ' · User: ' + (a.user_id || 'anon') + '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  } catch(e) {
-    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
-  }
-}
-
-function toggleProof(id) {
-  const el = document.getElementById('proof-' + id);
-  el.style.display = el.style.display === 'block' ? 'none' : 'block';
-}
-
-async function deleteReading(id) {
-  if (!confirm('Delete this reading and its photo? This cannot be undone.')) return;
-  const r = await fetch(API + '/api/admin/readings/' + id, { method: 'DELETE', headers: adminHeaders() });
-  if (r.ok) { document.getElementById('card-' + id).remove(); loadReadings(); }
-  else alert('Delete failed');
-}
-
-async function deleteAllReadings() {
-  if (!confirm('Delete ALL readings and photos? This cannot be undone.')) return;
-  const r = await fetch(API + '/api/admin/readings', { method: 'DELETE', headers: adminHeaders() });
-  if (r.ok) { const d = await r.json(); alert('Deleted ' + d.deleted + ' readings.'); loadReadings(); }
-  else alert('Delete failed');
-}
-
-async function deleteStatement(id) {
-  if (!confirm('Delete this statement? This cannot be undone.')) return;
-  const r = await fetch(API + '/api/admin/statements/' + id, { method: 'DELETE', headers: adminHeaders() });
-  if (r.ok) loadStatements();
-  else alert('Delete failed');
-}
-
-async function clearAudit() {
-  if (!confirm('Clear the entire audit log? This cannot be undone.')) return;
-  const r = await fetch(API + '/api/admin/audit', { method: 'DELETE', headers: adminHeaders() });
-  if (r.ok) loadAudit();
-  else alert('Failed');
-}
-
-function openModal(src) {
-  document.getElementById('modalImg').src = src;
-  document.getElementById('imgModal').classList.remove('hidden');
-}
-function closeModal() {
-  document.getElementById('imgModal').classList.add('hidden');
-}
-
-// Auto-login if token exists in session
-if (token) {
-  document.getElementById('loginWrap').classList.add('hidden');
-  document.getElementById('dashboard').classList.remove('hidden');
-  loadReadings(); loadStatements(); loadAudit();
-}
 </script>
 </body>
 </html>
