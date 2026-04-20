@@ -58,20 +58,17 @@ function withTimeout(promise, ms, label) {
 }
 
 const VALIDATION_PROMPT = [
-  "You are validating a photo taken directly by a mobile phone camera of an electricity meter.",
-  "",
-  "IMPORTANT CONTEXT: Electricity meters are physical objects. They may have:",
-  "- Glass or plastic domes/covers (these cause reflections - this is NORMAL, not a screen)",
-  "- Analog dial displays with rotating wheels",
-  "- Digital LCD displays",
-  "- Weathering, dirt, scratches",
-  "",
-  "Only flag isPhotoOfScreen=true if you can see ACTUAL screen pixels, moire patterns, or a device bezel.",
-  "Glass reflections on a physical meter are NOT a screen.",
-  "Only flag isEdited=true if you see clear digital manipulation like cloning or impossible lighting.",
-  "",
-  'Return ONLY valid JSON with these exact keys:',
-  '{"isElectricityMeter":true,"hasVisibleMeterDisplay":true,"appearsGenuine":true,"isScreenshot":false,"isPhotoOfScreen":false,"isEdited":false,"isPhotoOfPrintedDocument":false,"confidencePercent":90,"notes":"brief note"}'
+  "You are analyzing a photo of a physical electricity meter to extract the kWh reading.",
+  "METER TYPES: Accept both digital display meters AND analog drum/odometer-style meters with rotating number drums.",
+  "ANALOG DRUM METERS: These have individual cylinders with numbers printed on them, like a car odometer.",
+  "Red or orange colored drums on the right side are standard decimal/tenth indicators - this is NORMAL and expected.",
+  "Aged, dirty, weathered, or dusty meter housings and glass domes are still valid physical meters.",
+  "Glass dome reflections or glare on the meter cover are NOT signs of a screen - this is a physical glass cover.",
+  "Cobwebs, grime, and worn surfaces confirm this is a real physical meter, not a screen.",
+  "READ only the black/white integer drums for the kWh value. IGNORE red/orange decimal drums.",
+  "REJECT only if: this is clearly a photo of a screen, a digital screenshot, or has obvious editing artifacts.",
+  "REJECT if the meter display is completely unreadable due to extreme blur or obstruction.",
+  "Return ONLY valid JSON: {\"isElectricityMeter\": true/false, \"isPhotoOfScreen\": false, \"isEdited\": false, \"reading\": number or null, \"confidence\": \"high\"/\"medium\"/\"low\", \"reason\": \"string\"}"
 ].join("\n");
 
 async function validateMeterImage(imageBuffer, mimeType, clientTs) {
