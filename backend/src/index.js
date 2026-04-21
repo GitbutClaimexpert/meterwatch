@@ -87,7 +87,7 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
           { type: "text", text: VALIDATION_PROMPT }
         ]}]
       }),
-      5000, "validation"
+      15000, "validation"
     );
     validation = JSON.parse(
       resp.content.filter(b => b.type === "text").map(b => b.text).join("").replace(/```json?|```/g, "").trim()
@@ -123,7 +123,7 @@ async function extractReading(imageBuffer, mimeType) {
         ].join("\n") }
       ]}]
     }),
-    5000, "extraction"
+    15000, "extraction"
   );
   const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
   try {
