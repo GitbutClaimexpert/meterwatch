@@ -37,7 +37,7 @@ function sha256hex(buffer) {
 
 const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-6";
 
 function auditLog(event, userId, details, ip) {
   db.insertAudit({
@@ -94,7 +94,7 @@ async function validateMeterImage(imageBuffer, mimeType, clientTs) {
     );
   } catch (e) {
     console.error("[VALIDATION]", e.message);
-    validation = { appearsGenuine: true, notes: "Validation skipped: " + e.message };
+    validation = { appearsGenuine: true, isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, notes: "Validation skipped: " + e.message };
   }
   if (validation.isScreenshot)             flags.push("CRITICAL: Screenshot detected");
   if (validation.isPhotoOfScreen)          flags.push("CRITICAL: Photo of a screen");
@@ -112,12 +112,14 @@ async function extractReading(imageBuffer, mimeType) {
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: [
-          "Read this electricity meter. Return ONLY valid JSON - no markdown, no extra text:",
+          "Read this electricity meter. It may be an analog drum/odometer style meter with rotating number cylinders.",
+          "Ignore any red or orange decimal drums on the right - read only the main black/white integer drums.",
+          "Return ONLY valid JSON - no markdown, no extra text:",
           '{"reading": 12345, "meterNumber": "ABC123", "rawText": "what you see on the display", "confidence": 85}',
           "",
           "Rules:",
           "- reading: the main kWh digits as a number (ignore red decimal digits), or null if unreadable",
-          "- meterNumber: the serial/meter number printed on the meter plate (labelled No, Meter No, Serial), or null if not visible",
+          "- meterNumber: the serial/meter number printed on the meter plate (labelled No, Meter No, Serial), or null",
           "- rawText: exactly what you can read on the display",
           "- confidence: 0-100 how confident you are in the reading"
         ].join("\n") }
@@ -195,7 +197,7 @@ app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Admin: WIPE ALL data (readings + statements + audit) ---
+// --- Admin: WIPE ALL data ---
 app.delete("/api/admin/wipe", requireAdmin, (req, res) => {
   try {
     const readings = db.getAllReadings();
@@ -245,7 +247,7 @@ app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Serve meter photo (with integrity hash header) ---
+// --- Serve meter photo ---
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
@@ -295,7 +297,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(409).json({ error: "This photo has already been submitted" });
     }
 
-    // STEP 1: Save image to disk immediately (before any AI call)
+    // STEP 1: Save image to disk immediately
     const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
@@ -306,7 +308,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(500).json({ error: "Image storage verification failed" });
     }
 
-    // STEP 2: Validate image authenticity (with timeout)
+    // STEP 2: Validate image authenticity
     const { flags, criticalFlags, validation } = await validateMeterImage(req.file.buffer, req.file.mimetype, clientTs);
 
     if (criticalFlags.length > 0) {
@@ -315,7 +317,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
     }
 
-    // STEP 3: Extract reading + meter number (with timeout)
+    // STEP 3: Extract reading + meter number
     let extraction = { reading: null, meterNumber: null, rawText: "", confidence: 0 };
     let aiTimedOut = false;
     try {
@@ -405,7 +407,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   }
 });
 
-// --- PATCH: submit manual reading for a photo that AI could not read ---
+// --- PATCH: manual reading ---
 app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
 
@@ -487,7 +489,7 @@ app.get("/api/readings", (req, res) => {
   })));
 });
 
-// --- Verify a single reading's integrity ---
+// --- Verify a single reading ---
 app.get("/api/readings/:id/verify", (req, res) => {
   const row = db.findReadingById(req.params.id, req.userId);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -581,5 +583,6 @@ if (fs.existsSync(FRONTEND_DIST)) {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log("[MeterWatch] Backend :" + PORT);
+  console.log("[MeterWatch] Model: " + MODEL);
   console.log("[MeterWatch] Images -> " + IMAGES_DIR);
 });
