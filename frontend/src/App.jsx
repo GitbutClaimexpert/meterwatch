@@ -21,11 +21,13 @@ async function api(method, path, body, isFormData = false) {
   return data;
 }
 
+// Mogale City brand colours
 const T = {
-  bg: "#080b0f", surface: "#0e1318", card: "#141a22", border: "#1e2a38",
-  borderHover: "#2e4058", accent: "#e8b84b", accentDark: "#6b4f0f",
-  success: "#34c97a", danger: "#e05252", warn: "#e8b84b",
-  text: "#dde3ed", muted: "#667080",
+  bg: "#0d0f08", surface: "#141a0e", card: "#1a2212", border: "#2a3a1a",
+  borderHover: "#3a5025", accent: "#4a8c2a", accentDark: "#2a5015",
+  accentLight: "#7dc44a", gold: "#d4a017", goldDark: "#8a6800",
+  success: "#34c97a", danger: "#e05252", warn: "#d4a017",
+  text: "#e8edd8", muted: "#6a7a50",
   mono: "'JetBrains Mono', 'Fira Code', monospace",
   sans: "'DM Sans', system-ui, sans-serif",
 };
@@ -49,7 +51,7 @@ img { display: block; }
 .nav-item.active svg { transform: scale(1.1); }
 .nav-item:active svg { transform: scale(.92); }
 .screen-header { margin-bottom: 24px; }
-.screen-title { font-family: ${T.mono}; font-size: 20px; font-weight: 600; color: ${T.accent}; letter-spacing: -.3px; }
+.screen-title { font-size: 18px; font-weight: 600; color: ${T.accent}; letter-spacing: .5px; }
 .screen-sub { font-size: 13px; color: ${T.muted}; margin-top: 3px; }
 .card { background: ${T.card}; border: 1px solid ${T.border}; border-radius: 14px; padding: 16px; }
 .card + .card { margin-top: 10px; }
@@ -62,8 +64,8 @@ img { display: block; }
 .stat-l { font-size: 11px; color: ${T.muted}; margin-top: 5px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 500; transition: all .15s; line-height: 1; }
 .btn:active { transform: scale(.96); }
-.btn-primary { background: ${T.accent}; color: #0a0700; }
-.btn-primary:hover { background: #f5cc6a; }
+.btn-primary { background: ${T.accent}; color: #fff; }
+.btn-primary:hover { background: #5aa034; }
 .btn-secondary { background: ${T.surface}; color: ${T.text}; border: 1px solid ${T.border}; }
 .btn-secondary:hover { border-color: ${T.borderHover}; }
 .btn-ghost { color: ${T.muted}; padding: 10px 14px; font-size: 14px; }
@@ -73,26 +75,15 @@ img { display: block; }
 .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
 .alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
 .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
-.alert-warn { background: #1a1200; border: 1px solid ${T.accentDark}; color: ${T.accent}; }
+.alert-warn { background: #1a1400; border: 1px solid ${T.goldDark}; color: ${T.gold}; }
 .alert-err { background: #1a0808; border: 1px solid #5a1010; color: ${T.danger}; }
-.alert-ok { background: #081a10; border: 1px solid #0e5025; color: ${T.success}; }
+.alert-ok { background: #081a08; border: 1px solid #1a5020; color: ${T.success}; }
 .alert-info { background: ${T.surface}; border: 1px solid ${T.border}; color: ${T.muted}; }
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-.badge-ok { background: #062010; color: ${T.success}; border: 1px solid #0e4020; }
-.badge-warn { background: #1a1200; color: ${T.accent}; border: 1px solid ${T.accentDark}; }
+.badge-ok { background: #081a08; color: ${T.success}; border: 1px solid #1a5020; }
+.badge-warn { background: #1a1400; color: ${T.gold}; border: 1px solid ${T.goldDark}; }
 .badge-err { background: #1a0606; color: ${T.danger}; border: 1px solid #5a0f0f; }
-.camera-wrap { width: 100%; border-radius: 16px; overflow: hidden; background: #000; position: relative; border: 1px solid ${T.border}; aspect-ratio: 3/4; }
-.camera-wrap video, .camera-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.camera-frame { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.camera-guide { width: 80%; height: 22%; border: 2px solid ${T.accent}; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); position: relative; }
-.camera-guide::before { content: 'Align meter display here'; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); font-size: 11px; color: ${T.accent}; white-space: nowrap; background: rgba(0,0,0,.7); padding: 3px 10px; border-radius: 10px; }
-.camera-corner { position: absolute; width: 16px; height: 16px; border-color: ${T.accent}; border-style: solid; }
-.camera-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 3px 0 0 0; }
-.camera-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 3px 0 0; }
-.camera-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 3px; }
-.camera-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 3px 0; }
-.capture-btn { width: 72px; height: 72px; border-radius: 50%; background: ${T.accent}; border: 4px solid rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; transition: transform .15s; }
-.capture-btn:active { transform: scale(.9); }
+.badge-green { background: #0a1a08; color: ${T.accent}; border: 1px solid ${T.accentDark}; }
 .reading-item { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid ${T.border}; cursor: pointer; }
 .reading-item:last-child { border-bottom: none; }
 .reading-thumb { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; background: ${T.surface}; flex-shrink: 0; border: 1px solid ${T.border}; }
@@ -106,20 +97,47 @@ img { display: block; }
 .spinner { width: 22px; height: 22px; border: 2px solid ${T.border}; border-top-color: ${T.accent}; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .dropzone { border: 2px dashed ${T.border}; border-radius: 14px; padding: 36px 16px; text-align: center; cursor: pointer; transition: all .2s; }
-.dropzone:hover, .dropzone.drag { border-color: ${T.accent}; background: rgba(232,184,75,.04); }
+.dropzone:hover, .dropzone.drag { border-color: ${T.accent}; background: rgba(74,140,42,.04); }
 .dropzone-icon { font-size: 40px; margin-bottom: 12px; }
 .dropzone-title { font-size: 15px; font-weight: 500; color: ${T.text}; margin-bottom: 4px; }
 .dropzone-sub { font-size: 13px; color: ${T.muted}; }
 .discrepancy-row { border-left: 3px solid ${T.danger}; padding-left: 12px; margin-bottom: 10px; }
 .discrepancy-row.low { border-left-color: ${T.success}; }
-.discrepancy-row.medium { border-left-color: ${T.accent}; }
+.discrepancy-row.medium { border-left-color: ${T.gold}; }
 .input-field { width: 100%; background: ${T.surface}; border: 1px solid ${T.border}; color: ${T.text}; padding: 12px 14px; border-radius: 10px; font-size: 16px; outline: none; transition: border-color .15s; }
 .input-field:focus { border-color: ${T.accent}; }
 .input-mono { font-family: ${T.mono}; font-size: 24px; padding: 14px; }
 .divider { height: 1px; background: ${T.border}; margin: 16px 0; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 .slide-up { animation: slideUp .25s ease; }
+.mogale-header { border-bottom: 2px solid ${T.gold}; padding-bottom: 14px; margin-bottom: 20px; }
+.mogale-brand { display: flex; align-items: center; gap: 10px; }
+.mogale-city-name { font-size: 21px; font-weight: 700; color: ${T.accent}; letter-spacing: .3px; font-style: italic; }
+.mogale-sub-name { font-size: 13px; font-weight: 700; color: ${T.text}; font-style: italic; letter-spacing: .5px; }
+.mogale-tagline { font-size: 11px; color: ${T.gold}; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+.gold-swoosh { width: 100%; height: 3px; background: linear-gradient(90deg, transparent, ${T.gold}, transparent); border-radius: 2px; margin: 8px 0; }
 `;
+
+// Mogale City icon - cowrie shell inspired
+const MogaleIcon = ({ size = 36 }) => (
+  <svg width={size} height={size} viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="mg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#7a5020" />
+        <stop offset="100%" stopColor="#d4a017" />
+      </linearGradient>
+      <linearGradient id="mg2" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#d4a017" />
+        <stop offset="100%" stopColor="#f0c840" />
+      </linearGradient>
+    </defs>
+    <ellipse cx="30" cy="30" rx="22" ry="26" stroke="url(#mg2)" strokeWidth="3.5" fill="none"/>
+    <ellipse cx="30" cy="30" rx="14" ry="18" stroke="url(#mg1)" strokeWidth="2.5" fill="none"/>
+    <line x1="22" y1="18" x2="38" y2="42" stroke="#7a5020" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="26" y1="15" x2="34" y2="45" stroke="#7a5020" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
+    <line x1="18" y1="22" x2="42" y2="38" stroke="#7a5020" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
+  </svg>
+);
 
 const Ico = ({ name, size = 24, color }) => {
   const paths = {
@@ -135,7 +153,7 @@ const Ico = ({ name, size = 24, color }) => {
     chevron: <polyline points="9,18 15,12 9,6"/>,
     download: <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
     lock: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>,
-    zap: <><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/></>,
+    globe: <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></>,
     admin: <><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></>,
   };
   return (
@@ -179,8 +197,8 @@ export default function App() {
       <div className="app">
         {loading
           ? <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-              <div className="spinner" />
-              <div style={{ fontSize: 13, color: T.muted }}>Loading MeterWatch...</div>
+              <MogaleIcon size={52} />
+              <div style={{ fontSize: 11, color: T.gold, letterSpacing: 2, textTransform: "uppercase" }}>Loading...</div>
             </div>
           : <Screen readings={readings} statements={statements} onRefresh={loadData} goTo={setTab} />
         }
@@ -206,12 +224,24 @@ function HomeScreen({ readings, statements, goTo }) {
 
   return (
     <div className="screen">
-      <div className="screen-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <Ico name="zap" size={22} color={T.accent} />
-          <span className="screen-title">MeterWatch</span>
+      <div className="mogale-header">
+        <div className="mogale-brand">
+          <MogaleIcon size={44} />
+          <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span className="mogale-city-name">Mogale City</span>
+              <span className="mogale-sub-name">Local Municipality</span>
+            </div>
+            <div className="mogale-tagline">Meter Monitoring System</div>
+          </div>
         </div>
-        <p className="screen-sub">Verified electricity monitoring</p>
+        <div className="gold-swoosh" />
+        <div style={{ fontSize: 11, color: T.muted, display: "flex", alignItems: "center", gap: 4 }}>
+          <Ico name="globe" size={11} color={T.muted} />
+          <a href="https://mogalecity.gov.za" target="_blank" rel="noopener noreferrer" style={{ color: T.muted, textDecoration: "none" }}>mogalecity.gov.za</a>
+          <span style={{ margin: "0 4px" }}>&middot;</span>
+          <span style={{ color: T.gold, fontStyle: "italic" }}>The City of Human Origin</span>
+        </div>
       </div>
 
       <div className="stat-row">
@@ -241,10 +271,10 @@ function HomeScreen({ readings, statements, goTo }) {
               <div className="card-value">{latest.reading_kwh.toLocaleString()}<span style={{ fontSize: 16, color: T.muted, fontWeight: 400 }}> kWh</span></div>
               <div className="card-sub">{latestTs ? new Date(latestTs).toLocaleString("en-ZA") : "-"}</div>
             </div>
-            <span className="badge badge-ok"><Ico name="shield" size={11} /> Verified</span>
+            <span className="badge badge-green"><Ico name="shield" size={11} /> Verified</span>
           </div>
           {latest.fraudFlags?.length > 0 && (
-            <div style={{ marginTop: 10, padding: "8px 10px", background: "#1a1000", borderRadius: 8, fontSize: 12, color: T.accent }}>
+            <div style={{ marginTop: 10, padding: "8px 10px", background: "#1a1400", borderRadius: 8, fontSize: 12, color: T.gold }}>
               &#9888; {latest.fraudFlags.length} integrity flag{latest.fraudFlags.length > 1 ? "s" : ""} - tap History to review
             </div>
           )}
@@ -321,13 +351,11 @@ function CaptureScreen({ onRefresh }) {
     setPhase("extracting");
     try {
       const compressed = await compressImage(file, 1400);
-      const url = URL.createObjectURL(compressed);
       setCapturedBlob(compressed);
-      setCapturedUrl(url);
-    } catch (compressErr) {
-      const url = URL.createObjectURL(file);
+      setCapturedUrl(URL.createObjectURL(compressed));
+    } catch {
       setCapturedBlob(file);
-      setCapturedUrl(url);
+      setCapturedUrl(URL.createObjectURL(file));
     }
     try {
       const fd = new FormData();
@@ -338,7 +366,7 @@ function CaptureScreen({ onRefresh }) {
       setMeterNumber(result.meterNumber ? String(result.meterNumber) : "");
       setConfirmedReading(result.aiReading != null ? result.aiReading.toString() : "");
       setPhase("confirm");
-    } catch (e) {
+    } catch {
       setAiReading(null);
       setConfirmedReading("");
       setPhase("confirm");
@@ -398,7 +426,7 @@ function CaptureScreen({ onRefresh }) {
 
       {phase === "start" && (
         <div>
-          <div className="alert alert-warn" style={{ marginBottom: 20 }}>
+          <div className="alert alert-info" style={{ marginBottom: 20 }}>
             <Ico name="lock" size={16} />
             <div style={{ fontSize: 13 }}>
               <strong>Live photo required.</strong> Your photo is fingerprinted and GPS-stamped the moment it's taken to prevent fraud.
@@ -439,25 +467,13 @@ function CaptureScreen({ onRefresh }) {
               {aiReading != null ? `${aiReading.toLocaleString()} kWh` : "Could not read - enter manually"}
             </div>
             <div className="card-label">Confirm or Correct Reading (kWh)</div>
-            <input
-              className="input-field input-mono"
-              type="number"
-              min="0"
-              step="0.1"
-              placeholder="e.g. 12345.6"
-              value={confirmedReading}
-              onChange={e => { setConfirmedReading(e.target.value); setError(""); }}
-            />
+            <input className="input-field input-mono" type="number" min="0" step="0.1" placeholder="e.g. 12345.6"
+              value={confirmedReading} onChange={e => { setConfirmedReading(e.target.value); setError(""); }} />
             {error && <div style={{ color: T.danger, fontSize: 13, marginTop: 8 }}>{error}</div>}
             <div className="card-label" style={{ marginTop: 12 }}>Meter Number</div>
-            <input
-              className="input-field"
-              type="text"
-              placeholder={aiMeterNumber ? "" : "Not detected - enter manually"}
-              value={meterNumber}
-              onChange={e => setMeterNumber(e.target.value)}
-            />
-            {!aiMeterNumber && <div style={{ fontSize: 11, color: T.accent, marginTop: 4 }}>&#9888; Enter meter number manually</div>}
+            <input className="input-field" type="text" placeholder={aiMeterNumber ? "" : "Not detected - enter manually"}
+              value={meterNumber} onChange={e => setMeterNumber(e.target.value)} />
+            {!aiMeterNumber && <div style={{ fontSize: 11, color: T.gold, marginTop: 4 }}>&#9888; Enter meter number manually</div>}
           </div>
           {gps && <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginBottom: 10 }}>&#128205; GPS: {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}</div>}
           <div style={{ display: "flex", gap: 10 }}>
@@ -493,8 +509,8 @@ function CaptureScreen({ onRefresh }) {
             {savedResult.fraudFlags?.length > 0 && (
               <>
                 <div className="divider" />
-                <div className="card-label" style={{ color: T.accent }}>Integrity Flags</div>
-                {savedResult.fraudFlags.map((f, i) => <div key={i} style={{ fontSize: 12, color: T.accent, padding: "3px 0" }}>&#9888; {f}</div>)}
+                <div className="card-label" style={{ color: T.gold }}>Integrity Flags</div>
+                {savedResult.fraudFlags.map((f, i) => <div key={i} style={{ fontSize: 12, color: T.gold, padding: "3px 0" }}>&#9888; {f}</div>)}
               </>
             )}
           </div>
@@ -535,58 +551,42 @@ function HistoryScreen({ readings }) {
     return (
       <div className="screen slide-up">
         <button className="btn btn-ghost" onClick={() => { setSelected(null); setVerifyResult(null); }} style={{ marginBottom: 16 }}>&#8592; Back</button>
-
         <div style={{ position: "relative", marginBottom: 12 }}>
-          <img
-            src={`${API}${r.imagePath}`}
-            alt="meter"
-            style={{ width: "100%", borderRadius: 14, border: `1px solid ${T.border}`, display: "block" }}
-            onError={e => { e.target.style.display = "none"; }}
-          />
+          <img src={`${API}${r.imagePath}`} alt="meter" style={{ width: "100%", borderRadius: 14, border: `1px solid ${T.border}`, display: "block" }} onError={e => { e.target.style.display = "none"; }} />
         </div>
-
         <div className="card" style={{ marginBottom: 10 }}>
           <div className="card-label">Reading</div>
           <div className="card-value">{r.reading_kwh.toLocaleString()} <span style={{ fontSize: 16, color: T.muted, fontWeight: 400 }}>kWh</span></div>
-          <div className="card-sub">
-            {ts ? new Date(ts).toLocaleString("en-ZA") : "-"} &middot; {r.reading_source?.replace("_", " ")}
-          </div>
+          <div className="card-sub">{ts ? new Date(ts).toLocaleString("en-ZA") : "-"} &middot; {r.reading_source?.replace("_", " ")}</div>
           {r.ai_reading_kwh && r.ai_reading_kwh !== r.reading_kwh && (
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>
-              AI read: {r.ai_reading_kwh} kWh (user corrected to {r.reading_kwh})
-            </div>
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>AI read: {r.ai_reading_kwh} kWh (user corrected to {r.reading_kwh})</div>
           )}
         </div>
-
         {r.gps_lat && (
           <div className="card" style={{ marginBottom: 10 }}>
             <div className="card-label">GPS Location</div>
             <div style={{ fontFamily: T.mono, fontSize: 13 }}>{r.gps_lat.toFixed(6)}, {r.gps_lng.toFixed(6)}</div>
           </div>
         )}
-
         <div className="card" style={{ marginBottom: 10 }}>
           <div className="card-label">Image SHA-256 Fingerprint</div>
           <div style={{ fontFamily: T.mono, fontSize: 10, wordBreak: "break-all", color: T.muted, lineHeight: 1.8 }}>{r.image_hash}</div>
           <div className="card-label" style={{ marginTop: 10 }}>Chain Hash</div>
           <div style={{ fontFamily: T.mono, fontSize: 10, wordBreak: "break-all", color: T.muted, lineHeight: 1.8 }}>{r.chain_hash}</div>
         </div>
-
         {r.fraudFlags?.length > 0 && (
-          <div className="card" style={{ borderColor: T.accentDark, marginBottom: 10 }}>
-            <div className="card-label" style={{ color: T.accent }}>Integrity Flags</div>
+          <div className="card" style={{ borderColor: T.goldDark, marginBottom: 10 }}>
+            <div className="card-label" style={{ color: T.gold }}>Integrity Flags</div>
             {r.fraudFlags.map((f, i) => (
-              <div key={i} style={{ fontSize: 12, color: T.accent, padding: "4px 0", borderBottom: i < r.fraudFlags.length - 1 ? `1px solid ${T.border}` : "none" }}>&#9888; {f}</div>
+              <div key={i} style={{ fontSize: 12, color: T.gold, padding: "4px 0", borderBottom: i < r.fraudFlags.length - 1 ? `1px solid ${T.border}` : "none" }}>&#9888; {f}</div>
             ))}
           </div>
         )}
-
         <button className="btn btn-secondary btn-full" onClick={() => runVerify(r)} disabled={verifying} style={{ marginBottom: 10 }}>
           {verifying ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Verifying...</> : <><Ico name="shield" size={16} /> Run Integrity Verification</>}
         </button>
-
         {verifyResult && (
-          <div className="card slide-up" style={{ borderColor: verifyResult.pass ? "#0e5025" : "#5a1010" }}>
+          <div className="card slide-up" style={{ borderColor: verifyResult.pass ? "#1a5020" : "#5a1010" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Ico name={verifyResult.pass ? "check" : "x"} size={18} color={verifyResult.pass ? T.success : T.danger} />
               <div style={{ fontWeight: 500, color: verifyResult.pass ? T.success : T.danger }}>
@@ -625,12 +625,7 @@ function HistoryScreen({ readings }) {
                   <div className="chain-dot" />
                   {i < readings.length - 1 && <div className="chain-line" />}
                 </div>
-                <img
-                  className="reading-thumb"
-                  src={`${API}${r.imagePath}`}
-                  alt="meter"
-                  onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }}
-                />
+                <img className="reading-thumb" src={`${API}${r.imagePath}`} alt="meter" onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }} />
                 <div className="reading-thumb-placeholder" style={{ display: "none" }}>&#9889;</div>
                 <div className="reading-body">
                   <div className="reading-val">{r.reading_kwh.toLocaleString()} <span style={{ fontSize: 14, color: T.muted }}>kWh</span></div>
@@ -638,7 +633,7 @@ function HistoryScreen({ readings }) {
                   <div style={{ marginTop: 5 }}>
                     {r.fraudFlags?.length > 0
                       ? <span className="badge badge-warn">&#9888; {r.fraudFlags.length} flag{r.fraudFlags.length > 1 ? "s" : ""}</span>
-                      : <span className="badge badge-ok"><Ico name="check" size={10} /> Verified</span>
+                      : <span className="badge badge-green"><Ico name="check" size={10} /> Verified</span>
                     }
                   </div>
                 </div>
@@ -680,7 +675,6 @@ function UploadScreen({ statements, onRefresh }) {
         <div className="screen-title">Upload Statement</div>
         <p className="screen-sub">Photo or screenshot of your municipal electricity bill</p>
       </div>
-
       {phase === "idle" && (
         <>
           <div className={`dropzone ${drag ? "drag" : ""}`}
@@ -690,26 +684,23 @@ function UploadScreen({ statements, onRefresh }) {
             onClick={() => fileRef.current?.click()}>
             <div className="dropzone-icon">&#128196;</div>
             <div className="dropzone-title">Tap to upload your bill</div>
-            <div className="dropzone-sub">Photo, screenshot, or PDF of your statement</div>
+            <div className="dropzone-sub">Photo, screenshot, or PDF of your Mogale City statement</div>
           </div>
           <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); }} />
         </>
       )}
-
       {phase === "uploading" && (
         <div className="card" style={{ textAlign: "center", padding: 32 }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
           <div style={{ color: T.muted }}>AI parsing your statement...</div>
         </div>
       )}
-
       {phase === "error" && (
         <div>
           <div className="alert alert-err"><span className="alert-icon">&#10007;</span><div>{error}</div></div>
           <button className="btn btn-secondary btn-full" onClick={() => setPhase("idle")}>Try Again</button>
         </div>
       )}
-
       {phase === "done" && parsed && (
         <div className="slide-up">
           <div className="alert alert-ok" style={{ marginBottom: 14 }}><Ico name="check" size={14} /><div>Statement parsed successfully</div></div>
@@ -725,7 +716,7 @@ function UploadScreen({ statements, onRefresh }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div><div className="card-label">Reading Type</div><div style={{ fontFamily: T.mono, fontSize: 16, fontWeight: 600 }}>{parsed.readingType || "UNKNOWN"}</div></div>
               <span className={`badge ${parsed.readingType === "ESTIMATED" ? "badge-err" : parsed.readingType === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>
-                {parsed.readingType === "ESTIMATED" ? "&#9888; Estimated" : parsed.readingType === "ACTUAL" ? "&#10003; Actual" : "? Unknown"}
+                {parsed.readingType === "ESTIMATED" ? "Estimated" : parsed.readingType === "ACTUAL" ? "Actual" : "Unknown"}
               </span>
             </div>
           </div>
@@ -735,15 +726,10 @@ function UploadScreen({ statements, onRefresh }) {
             {parsed.municipality && <div className="card-sub">{parsed.municipality}</div>}
             {parsed.accountNumber && <div className="card-sub">Account: {parsed.accountNumber}</div>}
           </div>
-          {parsed.notes && (
-            <div className="alert alert-info" style={{ marginBottom: 10 }}>
-              <span className="alert-icon">&#8505;</span><div style={{ fontSize: 12 }}>{parsed.notes}</div>
-            </div>
-          )}
+          {parsed.notes && <div className="alert alert-info" style={{ marginBottom: 10 }}><span className="alert-icon">&#8505;</span><div style={{ fontSize: 12 }}>{parsed.notes}</div></div>}
           <button className="btn btn-secondary btn-full" onClick={() => setPhase("idle")}>Upload Another</button>
         </div>
       )}
-
       {statements.length > 0 && phase === "idle" && (
         <div style={{ marginTop: 24 }}>
           <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Uploaded Statements ({statements.length})</div>
@@ -752,12 +738,10 @@ function UploadScreen({ statements, onRefresh }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 500, fontFamily: T.mono }}>{s.billing_start || "?"} - {s.billing_end || "?"}</div>
-                  <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{s.municipality || "Municipal"} &middot; R {s.amount_due?.toFixed(2) || "-"}</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{s.municipality || "Mogale City"} &middot; R {s.amount_due?.toFixed(2) || "-"}</div>
                   {s.account_number && <div style={{ fontSize: 11, color: T.muted }}>Acc: {s.account_number}</div>}
                 </div>
-                <span className={`badge ${s.reading_type === "ESTIMATED" ? "badge-err" : s.reading_type === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>
-                  {s.reading_type || "?"}
-                </span>
+                <span className={`badge ${s.reading_type === "ESTIMATED" ? "badge-err" : s.reading_type === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>{s.reading_type || "?"}</span>
               </div>
             </div>
           ))}
@@ -788,51 +772,43 @@ function CompareScreen({ readings, statements }) {
     const blob = new Blob([analysis.disputeLetter], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "MeterWatch_Dispute_Letter.txt"; a.click();
+    a.href = url; a.download = "MogaleCity_Dispute_Letter.txt"; a.click();
   };
 
-  const statusColors = { OVERBILLED: T.danger, ACCURATE: T.success, UNDERBILLED: T.accent, INSUFFICIENT_DATA: T.muted };
+  const statusColors = { OVERBILLED: T.danger, ACCURATE: T.success, UNDERBILLED: T.gold, INSUFFICIENT_DATA: T.muted };
 
   return (
     <div className="screen">
       <div className="screen-header">
         <div className="screen-title">Dispute Analysis</div>
-        <p className="screen-sub">Compare your readings against municipal billing</p>
+        <p className="screen-sub">Compare your readings against Mogale City billing</p>
       </div>
-
       <div className="stat-row" style={{ marginBottom: 16 }}>
         <div className="stat"><div className="stat-n">{readings.length}</div><div className="stat-l">Your Readings</div></div>
         <div className="stat"><div className="stat-n">{statements.length}</div><div className="stat-l">Statements</div></div>
       </div>
-
       {error && <div className="alert alert-err" style={{ marginBottom: 12 }}><span className="alert-icon">&#10007;</span><div>{error}</div></div>}
-
       {phase === "idle" && (
         <button className="btn btn-primary btn-full btn-lg" onClick={runAnalysis}>
           <Ico name="compare" size={20} /> Run Discrepancy Analysis
         </button>
       )}
-
       {phase === "loading" && (
         <div className="card" style={{ textAlign: "center", padding: 32 }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
           <div style={{ color: T.muted }}>AI analysing billing data...</div>
-          <div style={{ fontSize: 12, color: T.muted, marginTop: 6 }}>Comparing your meter photos against statement readings</div>
+          <div style={{ fontSize: 12, color: T.muted, marginTop: 6 }}>Comparing your meter photos against Mogale City statement readings</div>
         </div>
       )}
-
       {phase === "done" && analysis && (
         <div className="slide-up">
           <div className="card" style={{ borderColor: statusColors[analysis.overallStatus] || T.border, marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div className="card-label">Overall Status</div>
-              <span className={`badge ${analysis.overallStatus === "OVERBILLED" ? "badge-err" : analysis.overallStatus === "ACCURATE" ? "badge-ok" : "badge-warn"}`}>
-                {analysis.overallStatus}
-              </span>
+              <span className={`badge ${analysis.overallStatus === "OVERBILLED" ? "badge-err" : analysis.overallStatus === "ACCURATE" ? "badge-ok" : "badge-warn"}`}>{analysis.overallStatus}</span>
             </div>
             <div style={{ fontSize: 14, color: T.muted, lineHeight: 1.6 }}>{analysis.summary}</div>
           </div>
-
           {(analysis.totalOverbilledKwh > 0 || analysis.estimatedOverbillingTotal > 0) && (
             <div className="card" style={{ background: "#1a0606", borderColor: "#5a1010", marginBottom: 12 }}>
               <div className="card-label" style={{ color: T.danger }}>Estimated Overbilling</div>
@@ -840,14 +816,11 @@ function CompareScreen({ readings, statements }) {
                 {(analysis.totalOverbilledKwh || analysis.estimatedOverbillingTotal || 0).toFixed(1)}<span style={{ fontSize: 16 }}> kWh</span>
               </div>
               {analysis.totalRandOverbilled && (
-                <div style={{ fontFamily: T.mono, fontSize: 20, color: T.danger, marginTop: 6 }}>
-                  approx. R {analysis.totalRandOverbilled.toFixed(2)}
-                </div>
+                <div style={{ fontFamily: T.mono, fontSize: 20, color: T.danger, marginTop: 6 }}>approx. R {analysis.totalRandOverbilled.toFixed(2)}</div>
               )}
               <div style={{ fontSize: 12, color: T.muted, marginTop: 6 }}>potentially incorrectly billed</div>
             </div>
           )}
-
           {analysis.discrepancies?.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Discrepancies Found</div>
@@ -869,26 +842,20 @@ function CompareScreen({ readings, statements }) {
                       </div>
                     )}
                     <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.5 }}>{d.explanation || d.description}</div>
-                    {d.overbilledKwh > 0 && (
-                      <div style={{ fontSize: 12, color: T.danger, marginTop: 4 }}>Overbilled: {d.overbilledKwh} kWh</div>
-                    )}
+                    {d.overbilledKwh > 0 && <div style={{ fontSize: 12, color: T.danger, marginTop: 4 }}>Overbilled: {d.overbilledKwh} kWh</div>}
                   </div>
                 </div>
               ))}
             </div>
           )}
-
           {analysis.recommendedAction && (
             <div className="alert alert-warn" style={{ marginBottom: 14 }}>
               <span className="alert-icon">&#9888;</span>
               <div><strong>Next step:</strong><br /><span style={{ fontSize: 13 }}>{analysis.recommendedAction}</span></div>
             </div>
           )}
-
           <div style={{ display: "flex", gap: 10 }}>
-            {analysis.disputeLetter && (
-              <button className="btn btn-primary btn-full" onClick={exportLetter}><Ico name="download" size={18} /> Dispute Letter</button>
-            )}
+            {analysis.disputeLetter && <button className="btn btn-primary btn-full" onClick={exportLetter}><Ico name="download" size={18} /> Dispute Letter</button>}
             <button className="btn btn-secondary" style={{ padding: "14px 16px" }} onClick={() => setPhase("idle")}><Ico name="refresh" size={18} /></button>
           </div>
         </div>
@@ -914,9 +881,9 @@ function AdminScreen({ readings, statements, onRefresh }) {
 
   const tabStyle = (id) => ({
     flex: 1, padding: "10px 4px", fontSize: 12, fontWeight: 500,
-    borderBottom: `2px solid ${activeTab === id ? T.accent : "transparent"}`,
     color: activeTab === id ? T.accent : T.muted,
-    background: "none", border: "none", borderBottom: `2px solid ${activeTab === id ? T.accent : "transparent"}`,
+    background: "none", border: "none",
+    borderBottom: `2px solid ${activeTab === id ? T.accent : "transparent"}`,
     cursor: "pointer",
   });
 
@@ -926,13 +893,11 @@ function AdminScreen({ readings, statements, onRefresh }) {
         <div className="screen-title">Admin Panel</div>
         <p className="screen-sub">All readings, statements & audit log</p>
       </div>
-
       <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, marginBottom: 16 }}>
         <button style={tabStyle("readings")} onClick={() => setActiveTab("readings")}>Readings ({readings.length})</button>
         <button style={tabStyle("statements")} onClick={() => setActiveTab("statements")}>Statements ({statements.length})</button>
         <button style={tabStyle("audit")} onClick={() => setActiveTab("audit")}>Audit Log</button>
       </div>
-
       {activeTab === "readings" && (
         <div>
           {readings.length === 0
@@ -942,24 +907,14 @@ function AdminScreen({ readings, statements, onRefresh }) {
               return (
                 <div key={r.id} className="card" style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <img
-                      src={`${API}${r.imagePath}`}
-                      alt="meter"
-                      style={{ width: 54, height: 54, borderRadius: 8, objectFit: "cover", border: `1px solid ${T.border}`, flexShrink: 0 }}
-                      onError={e => { e.target.style.display = "none"; }}
-                    />
+                    <img src={`${API}${r.imagePath}`} alt="meter" style={{ width: 54, height: 54, borderRadius: 8, objectFit: "cover", border: `1px solid ${T.border}`, flexShrink: 0 }} onError={e => { e.target.style.display = "none"; }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: T.mono, fontSize: 18, fontWeight: 600 }}>{r.reading_kwh.toLocaleString()} kWh</div>
                       <div style={{ fontSize: 11, color: T.muted }}>{ts ? new Date(ts).toLocaleString("en-ZA") : "-"}</div>
                       <div style={{ fontSize: 11, color: T.muted }}>User: {r.user_id} &middot; {r.reading_source}</div>
                       {r.gps_lat && <div style={{ fontSize: 11, color: T.muted }}>&#128205; {r.gps_lat.toFixed(4)}, {r.gps_lng.toFixed(4)}</div>}
                     </div>
-                    <div>
-                      {r.fraudFlags?.length > 0
-                        ? <span className="badge badge-warn">&#9888; {r.fraudFlags.length}</span>
-                        : <span className="badge badge-ok">&#10003;</span>
-                      }
-                    </div>
+                    <div>{r.fraudFlags?.length > 0 ? <span className="badge badge-warn">&#9888; {r.fraudFlags.length}</span> : <span className="badge badge-green">&#10003;</span>}</div>
                   </div>
                 </div>
               );
@@ -967,7 +922,6 @@ function AdminScreen({ readings, statements, onRefresh }) {
           }
         </div>
       )}
-
       {activeTab === "statements" && (
         <div>
           {statements.length === 0
@@ -977,12 +931,10 @@ function AdminScreen({ readings, statements, onRefresh }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
                     <div style={{ fontFamily: T.mono, fontSize: 14, fontWeight: 600 }}>{s.billing_start || "?"} - {s.billing_end || "?"}</div>
-                    <div style={{ fontSize: 12, color: T.muted }}>{s.municipality || "Municipal"}</div>
+                    <div style={{ fontSize: 12, color: T.muted }}>{s.municipality || "Mogale City"}</div>
                     {s.account_number && <div style={{ fontSize: 11, color: T.muted }}>Acc: {s.account_number}</div>}
                   </div>
-                  <span className={`badge ${s.reading_type === "ESTIMATED" ? "badge-err" : s.reading_type === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>
-                    {s.reading_type || "?"}
-                  </span>
+                  <span className={`badge ${s.reading_type === "ESTIMATED" ? "badge-err" : s.reading_type === "ACTUAL" ? "badge-ok" : "badge-warn"}`}>{s.reading_type || "?"}</span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   <div><div style={{ fontSize: 10, color: T.muted }}>Opening</div><div style={{ fontFamily: T.mono, fontSize: 13 }}>{s.opening_kwh ?? "-"}</div></div>
@@ -995,12 +947,9 @@ function AdminScreen({ readings, statements, onRefresh }) {
           }
         </div>
       )}
-
       {activeTab === "audit" && (
         <div>
-          <button className="btn btn-secondary btn-sm" onClick={loadAudit} style={{ marginBottom: 12 }}>
-            <Ico name="refresh" size={14} /> Refresh
-          </button>
+          <button className="btn btn-secondary btn-sm" onClick={loadAudit} style={{ marginBottom: 12 }}><Ico name="refresh" size={14} /> Refresh</button>
           {auditLoading
             ? <div style={{ textAlign: "center", padding: 24 }}><div className="spinner" style={{ margin: "0 auto" }} /></div>
             : audit.length === 0
@@ -1009,30 +958,18 @@ function AdminScreen({ readings, statements, onRefresh }) {
                 <div key={i} style={{ padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <span style={{
-                        fontFamily: T.mono, fontSize: 11, fontWeight: 600,
-                        color: a.event?.includes("FRAUD") ? T.danger : a.event?.includes("SUCCESS") ? T.success : T.accent
-                      }}>{a.event}</span>
+                      <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 600, color: a.event?.includes("FRAUD") ? T.danger : a.event?.includes("SUCCESS") ? T.success : T.accent }}>{a.event}</span>
                       <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>User: {a.user_id}</div>
                     </div>
-                    <div style={{ fontSize: 10, color: T.muted, textAlign: "right" }}>
-                      {a.server_ts ? new Date(a.server_ts).toLocaleString("en-ZA") : "-"}
-                    </div>
+                    <div style={{ fontSize: 10, color: T.muted, textAlign: "right" }}>{a.server_ts ? new Date(a.server_ts).toLocaleString("en-ZA") : "-"}</div>
                   </div>
-                  {a.details && (
-                    <div style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginTop: 4, wordBreak: "break-all" }}>
-                      {typeof a.details === "string" ? a.details : JSON.stringify(a.details)}
-                    </div>
-                  )}
+                  {a.details && <div style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginTop: 4, wordBreak: "break-all" }}>{typeof a.details === "string" ? a.details : JSON.stringify(a.details)}</div>}
                 </div>
               ))
           }
         </div>
       )}
-
-      <button className="btn btn-secondary btn-full" onClick={onRefresh} style={{ marginTop: 16 }}>
-        <Ico name="refresh" size={16} /> Refresh All Data
-      </button>
+      <button className="btn btn-secondary btn-full" onClick={onRefresh} style={{ marginTop: 16 }}><Ico name="refresh" size={16} /> Refresh All Data</button>
     </div>
   );
 }
