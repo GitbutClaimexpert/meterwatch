@@ -3,6 +3,7 @@ import cors from "cors";
 import multer from "multer";
 import crypto from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import sharp from "sharp";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -81,7 +82,22 @@ Rules:
 - confidence: 0-100`;
 
 async function analyzeImage(imageBuffer) {
-  const b64 = imageBuffer.toString("base64");
+  // Anthropic API max is 5MB — resize if needed, keep colour
+  const MAX_BYTES = 4 * 1024 * 1024;
+  let buf = imageBuffer;
+  if (buf.length > MAX_BYTES) {
+    try {
+      buf = await sharp(buf)
+        .resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      console.log("[analyzeImage] Resized from", imageBuffer.length, "to", buf.length, "bytes");
+    } catch (e) {
+      console.error("[analyzeImage] Resize failed:", e.message);
+      // proceed with original — will likely get 400 but at least we tried
+    }
+  }
+  const b64 = buf.toString("base64");
   let resp;
   try {
     resp = await callAI({
