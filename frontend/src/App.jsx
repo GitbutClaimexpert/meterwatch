@@ -62,14 +62,17 @@ const S = {
   },
 };
 
-// ── Image compression — HIGH quality for AI digit reading ──────────────────
+// ── Image prep — send raw file directly, NO canvas (canvas strips colour on iOS) ──
 async function compressImage(file) {
+  // If file is under 15MB, send as-is — preserves full colour and resolution
+  // Canvas re-encoding causes grayscale on some iOS devices
+  if (file.size <= 15 * 1024 * 1024) return file;
+  // Only use canvas as last resort for oversized files
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      // Keep full resolution up to 2000px — meter digits need clarity
       const MAX = 2000;
       let { width: w, height: h } = img;
       if (w > MAX || h > MAX) {
@@ -78,11 +81,8 @@ async function compressImage(file) {
         h = Math.round(h * ratio);
       }
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, w, h);
-      // 0.92 quality — keeps colour and sharpness, no grayscale
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
       canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.92);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
