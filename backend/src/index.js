@@ -27,49 +27,35 @@ const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
 })();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const MODEL = "claude-haiku-4-5-20251001";
+
+// Single shared client — no timeout set here so it doesn't interfere
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
 
 function hmacSign(data) { return crypto.createHmac("sha256", SIGNING_SECRET).update(data).digest("hex"); }
 function sha256hex(buffer) { return crypto.createHash("sha256").update(buffer).digest("hex"); }
-
 const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
-const MODEL = "claude-haiku-4-5-20251001";
-
-function makeClient() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 20000, maxRetries: 0 });
-}
 
 function auditLog(event, userId, details, ip) {
-  db.insertAudit({
-    server_ts: Date.now(), event,
-    user_id: userId || "anon",
-    details: JSON.stringify(details),
-    ip: ip || "",
-    entry_hash: sha256hex(Buffer.from(JSON.stringify({ event, userId, details, ip, ts: Date.now() })))
-  });
+  db.insertAudit({ server_ts: Date.now(), event, user_id: userId || "anon", details: JSON.stringify(details), ip: ip || "", entry_hash: sha256hex(Buffer.from(JSON.stringify({ event, userId, details, ip, ts: Date.now() }))) });
 }
 
-// --- AI call with AbortController so the TCP connection actually dies on timeout ---
-async function callAI(params, timeoutMs = 20000) {
+// Proper abort — passes signal directly to messages.create()
+async function callAI(params, timeoutMs = 25000) {
   const controller = new AbortController();
   const timer = setTimeout(() => {
-    console.error("[AI] Aborting after " + timeoutMs + "ms");
+    console.error("[AI] Hard abort after " + timeoutMs + "ms");
     controller.abort();
   }, timeoutMs);
   try {
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-      timeout: timeoutMs,
-      maxRetries: 0,
-      fetchOptions: { signal: controller.signal }
-    });
-    const result = await client.messages.create(params);
+    // signal is a valid option on messages.create() in the SDK
+    const result = await anthropic.messages.create(params, { signal: controller.signal });
     clearTimeout(timer);
     return result;
   } catch (err) {
     clearTimeout(timer);
-    if (controller.signal.aborted || err.name === "AbortError") {
-      throw new Error("AI_TIMEOUT after " + timeoutMs + "ms");
-    }
+    const isTimeout = controller.signal.aborted || err.name === "AbortError" || (err.message && err.message.includes("aborted"));
+    if (isTimeout) throw new Error("AI_TIMEOUT after " + timeoutMs + "ms");
     throw err;
   }
 }
@@ -101,33 +87,28 @@ async function analyzeImage(imageBuffer) {
     resp = await callAI({
       model: MODEL,
       max_tokens: 300,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-          { type: "text", text: COMBINED_PROMPT }
-        ]
-      }]
-    }, 20000);
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
+        { type: "text", text: COMBINED_PROMPT }
+      ]}]
+    }, 25000);
   } catch (err) {
-    console.error("[analyzeImage error]", err.message);
-    return { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, confidence: 0, reason: "AI unavailable: " + err.message, timedOut: true };
+    console.error("[analyzeImage]", err.message);
+    // Return safe fallback — image already saved, user will be prompted for manual entry
+    return { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, confidence: 0, reason: "AI error: " + err.message, timedOut: err.message.startsWith("AI_TIMEOUT") };
   }
   const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
+  console.log("[AI raw]", text.slice(0, 200));
   try {
     return JSON.parse(text.replace(/```json?|```/g, "").trim());
   } catch {
-    return { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, confidence: 0, reason: "JSON parse error: " + text.slice(0, 100) };
+    console.error("[AI parse fail]", text);
+    return { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, confidence: 0, reason: "JSON parse error" };
   }
 }
 
 function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gpsLat, gpsLng, prevChainHash }) {
-  const payload = [
-    "user_id=" + userId, "server_ts=" + serverTs, "image_hash=" + imageHash,
-    "reading_kwh=" + readingKwh, "ai_reading_kwh=" + (aiReadingKwh ?? "null"),
-    "gps_lat=" + (gpsLat ?? "null"), "gps_lng=" + (gpsLng ?? "null"),
-    "prev_chain_hash=" + prevChainHash,
-  ].join("|");
+  const payload = ["user_id=" + userId, "server_ts=" + serverTs, "image_hash=" + imageHash, "reading_kwh=" + readingKwh, "ai_reading_kwh=" + (aiReadingKwh ?? "null"), "gps_lat=" + (gpsLat ?? "null"), "gps_lng=" + (gpsLng ?? "null"), "prev_chain_hash=" + prevChainHash].join("|");
   const hmac = hmacSign(payload);
   const chainHash = sha256hex(Buffer.from(prevChainHash + ":" + imageHash + ":" + readingKwh + ":" + serverTs + ":" + userId));
   return { payload, hmac, chainHash };
@@ -140,19 +121,13 @@ function requireAdmin(req, res, next) {
 }
 
 const app = express();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => file.mimetype.startsWith("image/") ? cb(null, true) : cb(new Error("Images only"))
-});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 }, fileFilter: (req, file, cb) => file.mimetype.startsWith("image/") ? cb(null, true) : cb(new Error("Images only")) });
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use((req, _res, next) => { req.userId = req.headers["x-user-id"] || "default"; next(); });
 
-// --- Health check (quick test endpoint) ---
-app.get("/api/ping", (req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get("/api/ping", (req, res) => res.json({ ok: true, ts: Date.now(), model: MODEL }));
 
-// --- Admin auth ---
 app.post("/api/admin/login", (req, res) => {
   const { password } = req.body;
   if (!password || password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Wrong password" });
@@ -160,15 +135,14 @@ app.post("/api/admin/login", (req, res) => {
 });
 
 app.get("/api/admin/readings", requireAdmin, (req, res) => {
-  const rows = db.getAllReadings();
-  res.json(rows.map(r => ({ ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [], aiValidation: r.ai_validation || {}, imagePath: "/api/images/" + r.image_path, proof: { payload: r.proof_payload, hmac: r.proof_hmac } })));
+  res.json(db.getAllReadings().map(r => ({ ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [], aiValidation: r.ai_validation || {}, imagePath: "/api/images/" + r.image_path, proof: { payload: r.proof_payload, hmac: r.proof_hmac } })));
 });
 
 app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   const row = db.findReadingByIdAdmin(req.params.id);
   if (!row) return res.status(404).json({ error: "Not found" });
-  const diskPath = path.join(IMAGES_DIR, row.image_path);
-  if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+  const p = path.join(IMAGES_DIR, row.image_path);
+  if (fs.existsSync(p)) fs.unlinkSync(p);
   db.deleteReading(req.params.id);
   auditLog("ADMIN_DELETE_READING", "admin", { id: req.params.id }, req.ip);
   res.json({ ok: true });
@@ -200,8 +174,8 @@ app.get("/api/admin/statements", requireAdmin, (req, res) => { res.json(db.getAl
 app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   const row = db.findStatementByIdAdmin(req.params.id);
   if (!row) return res.status(404).json({ error: "Not found" });
-  const diskPath = path.join(STMTS_DIR, row.image_path);
-  if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+  const p = path.join(STMTS_DIR, row.image_path);
+  if (fs.existsSync(p)) fs.unlinkSync(p);
   db.deleteStatement(req.params.id);
   res.json({ ok: true });
 });
@@ -211,26 +185,22 @@ app.get("/api/images/:filename", (req, res) => {
   const filePath = path.join(IMAGES_DIR, filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Not found" });
   const fileBuffer = fs.readFileSync(filePath);
-  res.set("X-Live-Hash", sha256hex(fileBuffer));
-  res.set("Content-Type", "image/jpeg");
-  res.send(fileBuffer);
+  res.set("X-Live-Hash", sha256hex(fileBuffer)).set("Content-Type", "image/jpeg").send(fileBuffer);
 });
 
 app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
-    const imageHash = sha256hex(req.file.buffer);
     const analysis = await analyzeImage(req.file.buffer);
-    res.json({ imageHash, aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
+    res.json({ imageHash: sha256hex(req.file.buffer), aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
-    const imageHash = sha256hex(req.file.buffer);
     const analysis = await analyzeImage(req.file.buffer);
-    res.json({ imageHash, aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
+    res.json({ imageHash: sha256hex(req.file.buffer), aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -243,50 +213,38 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng) : null;
   const userConfirmed = req.body.confirmedReading ? parseFloat(req.body.confirmedReading) : null;
   const manualMeterNumber = req.body.meterNumber || null;
-
   auditLog("CAPTURE_ATTEMPT", req.userId, { bytes: req.file.size }, req.ip);
-
   try {
     const imageHash = sha256hex(req.file.buffer);
-    if (db.findReadingByHash(imageHash)) {
-      return res.status(409).json({ error: "This photo has already been submitted" });
-    }
+    if (db.findReadingByHash(imageHash)) return res.status(409).json({ error: "This photo has already been submitted" });
 
-    // Save image first (no AI yet)
     const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
 
-    // Single AI call (aborts cleanly after 20s)
     const flags = [];
     const analysis = await analyzeImage(req.file.buffer);
+    console.log("[CAPTURE] AI result:", JSON.stringify(analysis));
 
     if (analysis.isPhotoOfScreen === true || analysis.isEdited === true) {
       fs.unlinkSync(imageDiskPath);
       const reason = analysis.isPhotoOfScreen ? "Photo of a screen detected" : "Digital editing detected";
-      flags.push("CRITICAL: " + reason);
-      auditLog("FRAUD_BLOCKED", req.userId, { flags }, req.ip);
-      return res.status(422).json({ error: "Photo failed authenticity check", reason, flags });
+      auditLog("FRAUD_BLOCKED", req.userId, { reason }, req.ip);
+      return res.status(422).json({ error: "Photo failed authenticity check", reason, flags: ["CRITICAL: " + reason] });
     }
 
-    const aiReading = analysis.reading ?? null;
-    const aiMeterNumber = analysis.meterNumber ?? null;
+    const aiReading = (analysis.reading !== undefined && analysis.reading !== null) ? Number(analysis.reading) : null;
+    const aiMeterNumber = analysis.meterNumber || null;
 
     let finalReading, readingSource;
     if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
       finalReading = userConfirmed;
       readingSource = (aiReading !== null && Math.abs(userConfirmed - aiReading) < 0.5) ? "AI_CONFIRMED" : "AI_CORRECTED";
-    } else if (aiReading !== null) {
+    } else if (aiReading !== null && !isNaN(aiReading)) {
       finalReading = aiReading;
       readingSource = "AI_CONFIRMED";
     } else {
-      // AI couldn't read it — ask user to enter manually (image already saved)
-      return res.status(202).json({
-        status: "manual_required", imageHash, imageSaved: true,
-        aiTimedOut: !!analysis.timedOut,
-        meterNumber: aiMeterNumber,
-        message: "Photo saved. AI could not read the meter — please enter the reading manually.",
-      });
+      return res.status(202).json({ status: "manual_required", imageHash, imageSaved: true, aiTimedOut: !!analysis.timedOut, meterNumber: aiMeterNumber, message: "Photo saved. AI could not read the meter — please enter the reading manually." });
     }
 
     const finalMeterNumber = manualMeterNumber || aiMeterNumber || null;
@@ -296,15 +254,7 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
     const prevChainHash = last ? last.chain_hash : "genesis";
     const { payload: proofPayload, hmac: proofHmac, chainHash } = buildProof({ userId: req.userId, serverTs, imageHash, readingKwh: finalReading, aiReadingKwh: aiReading, gpsLat, gpsLng, prevChainHash });
     const id = "r_" + serverTs + "_" + crypto.randomBytes(4).toString("hex");
-    const reading = {
-      id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs,
-      reading_kwh: finalReading, ai_reading_kwh: aiReading, reading_source: readingSource,
-      meter_number: finalMeterNumber, image_hash: imageHash, image_path: imageFilename,
-      image_size_bytes: req.file.size, image_mime: req.file.mimetype,
-      gps_lat: gpsLat, gps_lng: gpsLng, ai_validation: analysis, fraud_flags: flags,
-      prev_chain_hash: prevChainHash, chain_hash: chainHash, proof_hmac: proofHmac, proof_payload: proofPayload,
-    };
-    db.insertReading(reading);
+    db.insertReading({ id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs, reading_kwh: finalReading, ai_reading_kwh: aiReading, reading_source: readingSource, meter_number: finalMeterNumber, image_hash: imageHash, image_path: imageFilename, image_size_bytes: req.file.size, image_mime: req.file.mimetype, gps_lat: gpsLat, gps_lng: gpsLng, ai_validation: analysis, fraud_flags: flags, prev_chain_hash: prevChainHash, chain_hash: chainHash, proof_hmac: proofHmac, proof_payload: proofPayload });
     auditLog("CAPTURE_SUCCESS", req.userId, { id, reading: finalReading, hash: imageHash, meterNumber: finalMeterNumber }, req.ip);
     res.json({ id, reading: finalReading, aiReading, readingSource, meterNumber: finalMeterNumber, meterNumberSource: manualMeterNumber ? "manual" : (aiMeterNumber ? "ai" : "unknown"), serverTs, imageHash, chainHash, fraudFlags: flags, imagePath: "/api/images/" + imageFilename, proof: { payload: proofPayload, hmac: proofHmac } });
   } catch (err) {
@@ -314,7 +264,6 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   }
 });
 
-// --- Manual reading ---
 app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   const serverTs = Date.now();
@@ -340,8 +289,7 @@ app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
 });
 
 app.get("/api/readings", (req, res) => {
-  const rows = db.getReadings(req.userId);
-  res.json(rows.map(r => ({ ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [], aiValidation: r.ai_validation || {}, imagePath: "/api/images/" + r.image_path, proof: { payload: r.proof_payload, hmac: r.proof_hmac } })));
+  res.json(db.getReadings(req.userId).map(r => ({ ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [], aiValidation: r.ai_validation || {}, imagePath: "/api/images/" + r.image_path, proof: { payload: r.proof_payload, hmac: r.proof_hmac } })));
 });
 
 app.get("/api/readings/:id/verify", (req, res) => {
@@ -349,10 +297,8 @@ app.get("/api/readings/:id/verify", (req, res) => {
   if (!row) return res.status(404).json({ error: "Not found" });
   const checks = [];
   const diskPath = path.join(IMAGES_DIR, row.image_path);
-  if (fs.existsSync(diskPath)) {
-    const liveHash = sha256hex(fs.readFileSync(diskPath));
-    checks.push({ name: "Image file integrity", pass: liveHash === row.image_hash, detail: liveHash === row.image_hash ? "SHA-256 verified" : "MISMATCH" });
-  } else { checks.push({ name: "Image file integrity", pass: false, detail: "File missing" }); }
+  if (fs.existsSync(diskPath)) { const h = sha256hex(fs.readFileSync(diskPath)); checks.push({ name: "Image file integrity", pass: h === row.image_hash, detail: h === row.image_hash ? "SHA-256 verified" : "MISMATCH" }); }
+  else checks.push({ name: "Image file integrity", pass: false, detail: "File missing" });
   const { hmac: recomputed } = buildProof({ userId: row.user_id, serverTs: row.server_ts, imageHash: row.image_hash, readingKwh: row.reading_kwh, aiReadingKwh: row.ai_reading_kwh, gpsLat: row.gps_lat, gpsLng: row.gps_lng, prevChainHash: row.prev_chain_hash });
   checks.push({ name: "HMAC proof", pass: recomputed === row.proof_hmac, detail: recomputed === row.proof_hmac ? "Valid" : "TAMPERED" });
   const prev = db.getReadingsBefore(req.userId, row.server_ts)[0];
@@ -367,11 +313,7 @@ app.post("/api/statements/upload", upload.single("statement"), async (req, res) 
     const imageHash = sha256hex(req.file.buffer);
     fs.writeFileSync(path.join(STMTS_DIR, imageHash + "_stmt.jpg"), req.file.buffer);
     const b64 = req.file.buffer.toString("base64");
-    const resp = await callAI({
-      model: MODEL, max_tokens: 1200,
-      system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.",
-      messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } }, { type: "text", text: 'Parse this bill. Return JSON:\n{"accountNumber":"string or null","billingPeriodStart":"YYYY-MM-DD or null","billingPeriodEnd":"YYYY-MM-DD or null","openingReading":"number or null","closingReading":"number or null","unitsConsumed":"number or null","readingType":"ACTUAL or ESTIMATED or UNKNOWN","amountDue":"number or null","currency":"ZAR","municipality":"string or null","notes":"key observations"}' }] }]
-    }, 30000);
+    const resp = await callAI({ model: MODEL, max_tokens: 1200, system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.", messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } }, { type: "text", text: 'Parse this bill. Return JSON:\n{"accountNumber":"string or null","billingPeriodStart":"YYYY-MM-DD or null","billingPeriodEnd":"YYYY-MM-DD or null","openingReading":"number or null","closingReading":"number or null","unitsConsumed":"number or null","readingType":"ACTUAL or ESTIMATED or UNKNOWN","amountDue":"number or null","currency":"ZAR","municipality":"string or null","notes":"key observations"}' }] }] }, 30000);
     const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
     const parsed = JSON.parse(text.replace(/```json?|```/g, "").trim());
     const id = "s_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
