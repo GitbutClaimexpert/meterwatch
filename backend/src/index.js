@@ -12,11 +12,11 @@ process.on("uncaughtException", (err) => { console.error("[CRASH]", err.message,
 process.on("unhandledRejection", (err) => { console.error("[REJECTION]", err); });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR   = path.join(__dirname, "../../data");
+const DATA_DIR = path.join(__dirname, "../../data");
 const IMAGES_DIR = path.join(DATA_DIR, "images");
-const STMTS_DIR  = path.join(DATA_DIR, "statements");
+const STMTS_DIR = path.join(DATA_DIR, "statements");
 fs.mkdirSync(IMAGES_DIR, { recursive: true });
-fs.mkdirSync(STMTS_DIR,  { recursive: true });
+fs.mkdirSync(STMTS_DIR, { recursive: true });
 
 const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
   const f = path.join(DATA_DIR, ".signing_secret");
@@ -28,16 +28,12 @@ const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
-function hmacSign(data) {
-  return crypto.createHmac("sha256", SIGNING_SECRET).update(data).digest("hex");
-}
-function sha256hex(buffer) {
-  return crypto.createHash("sha256").update(buffer).digest("hex");
-}
+function hmacSign(data) { return crypto.createHmac("sha256", SIGNING_SECRET).update(data).digest("hex"); }
+function sha256hex(buffer) { return crypto.createHash("sha256").update(buffer).digest("hex"); }
 
 const db = new JsonDB(path.join(DATA_DIR, "meterwatch.json"));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-haiku-4-5-20251001"; // Faster model for field use
 
 function auditLog(event, userId, details, ip) {
   db.insertAudit({
@@ -49,7 +45,6 @@ function auditLog(event, userId, details, ip) {
   });
 }
 
-// --- AI timeout wrapper ---
 function withTimeout(promise, ms, label) {
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error("AI_TIMEOUT: " + label + " exceeded " + ms + "ms")), ms)
@@ -57,96 +52,72 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]);
 }
 
-const VALIDATION_PROMPT = [
-  "You are analyzing a photo of a physical electricity meter to extract the kWh reading.",
-  "METER TYPES: Accept both digital display meters AND analog drum/odometer-style meters with rotating number drums.",
-  "ANALOG DRUM METERS: These have individual cylinders with numbers printed on them, like a car odometer.",
-  "Red or orange colored drums on the right side are standard decimal/tenth indicators - this is NORMAL and expected.",
-  "Aged, dirty, weathered, or dusty meter housings and glass domes are still valid physical meters.",
-  "Glass dome reflections or glare on the meter cover are NOT signs of a screen - this is a physical glass cover.",
-  "Cobwebs, grime, and worn surfaces confirm this is a real physical meter, not a screen.",
-  "READ only the black/white integer drums for the kWh value. IGNORE red/orange decimal drums.",
-  "REJECT only if: this is clearly a photo of a screen, a digital screenshot, or has obvious editing artifacts.",
-  "REJECT if the meter display is completely unreadable due to extreme blur or obstruction.",
-  "Return ONLY valid JSON: {\"isElectricityMeter\": true/false, \"isPhotoOfScreen\": false, \"isEdited\": false, \"reading\": number or null, \"confidence\": \"high\"/\"medium\"/\"low\", \"reason\": \"string\"}"
-].join("\n");
+// --- COMBINED: validate + extract in ONE API call ---
+const COMBINED_PROMPT = `You are analyzing a photo of a physical electricity meter.
 
-async function validateMeterImage(imageBuffer, mimeType, clientTs) {
-  const flags = [];
-  if (imageBuffer.length < 15 * 1024) flags.push("Image too small");
-  const timeDiff = Math.abs(Date.now() - clientTs);
-  if (timeDiff > 5 * 60 * 1000) flags.push("Timestamp gap: " + Math.round(timeDiff/1000) + "s");
-  const b64 = imageBuffer.toString("base64");
-  let validation = {};
-  try {
-    const resp = await withTimeout(
-      anthropic.messages.create({
-        model: MODEL, max_tokens: 400,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-          { type: "text", text: VALIDATION_PROMPT }
-        ]}]
-      }),
-      15000, "validation"
-    );
-    validation = JSON.parse(
-      resp.content.filter(b => b.type === "text").map(b => b.text).join("").replace(/```json?|```/g, "").trim()
-    );
-  } catch (e) {
-    console.error("[VALIDATION]", e.message);
-    validation = { appearsGenuine: true, isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, notes: "Validation skipped: " + e.message };
-  }
-  if (validation.isScreenshot)             flags.push("CRITICAL: Screenshot detected");
-  if (validation.isPhotoOfScreen)          flags.push("CRITICAL: Photo of a screen");
-  if (validation.isEdited)                 flags.push("CRITICAL: Digital editing detected");
-  if (validation.isPhotoOfPrintedDocument) flags.push("CRITICAL: Photo of printed document");
-  const criticalFlags = flags.filter(f => f.startsWith("CRITICAL:"));
-  return { flags, criticalFlags, validation };
+METER TYPES: Accept both digital display meters AND analog drum/odometer-style meters with rotating number drums.
+ANALOG DRUM METERS: Individual cylinders with numbers printed on them, like a car odometer.
+Red or orange colored drums on the right are NORMAL decimal/tenth indicators — IGNORE them, read only black/white integer drums.
+Aged, dirty, weathered, dusty meter housings and glass domes are still valid physical meters.
+Glass dome reflections or glare are NOT signs of a screen — this is physical glass.
+Cobwebs, grime, and worn surfaces confirm this is a real physical meter.
+
+REJECT only if: clearly a photo of a screen, a digital screenshot, or has obvious editing artifacts.
+REJECT if meter display is completely unreadable due to extreme blur or obstruction.
+
+Return ONLY valid JSON — no markdown, no extra text:
+{
+  "isElectricityMeter": true,
+  "isPhotoOfScreen": false,
+  "isEdited": false,
+  "reading": 12345,
+  "meterNumber": "ABC123 or null",
+  "rawText": "what you see on the display",
+  "confidence": 85,
+  "reason": "brief explanation"
 }
 
-async function extractReading(imageBuffer, mimeType) {
+Rules:
+- reading: main kWh digits as a number (ignore red/orange decimal digits), or null if unreadable
+- meterNumber: serial number printed on the meter plate (labelled No, Meter No, Serial), or null
+- confidence: 0-100 how confident you are in the reading`;
+
+async function analyzeMeterlImage(imageBuffer, mimeType) {
   const b64 = imageBuffer.toString("base64");
   const resp = await withTimeout(
     anthropic.messages.create({
-      model: MODEL, max_tokens: 300,
-      messages: [{ role: "user", content: [
-        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-        { type: "text", text: [
-          "Read this electricity meter. It may be an analog drum/odometer style meter with rotating number cylinders.",
-          "Ignore any red or orange decimal drums on the right - read only the main black/white integer drums.",
-          "Return ONLY valid JSON - no markdown, no extra text:",
-          '{"reading": 12345, "meterNumber": "ABC123", "rawText": "what you see on the display", "confidence": 85}',
-          "",
-          "Rules:",
-          "- reading: the main kWh digits as a number (ignore red decimal digits), or null if unreadable",
-          "- meterNumber: the serial/meter number printed on the meter plate (labelled No, Meter No, Serial), or null",
-          "- rawText: exactly what you can read on the display",
-          "- confidence: 0-100 how confident you are in the reading"
-        ].join("\n") }
-      ]}]
+      model: MODEL,
+      max_tokens: 400,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
+          { type: "text", text: COMBINED_PROMPT }
+        ]
+      }]
     }),
-    15000, "extraction"
+    25000, "analyze"
   );
   const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
   try {
     return JSON.parse(text.replace(/```json?|```/g, "").trim());
   } catch {
-    return { reading: null, meterNumber: null, rawText: text.trim(), confidence: 0 };
+    return { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, rawText: text.trim(), confidence: 0, reason: "Parse error" };
   }
 }
 
 function buildProof({ userId, serverTs, imageHash, readingKwh, aiReadingKwh, gpsLat, gpsLng, prevChainHash }) {
   const payload = [
-    "user_id="        + userId,
-    "server_ts="      + serverTs,
-    "image_hash="     + imageHash,
-    "reading_kwh="    + readingKwh,
+    "user_id=" + userId,
+    "server_ts=" + serverTs,
+    "image_hash=" + imageHash,
+    "reading_kwh=" + readingKwh,
     "ai_reading_kwh=" + (aiReadingKwh ?? "null"),
-    "gps_lat="        + (gpsLat ?? "null"),
-    "gps_lng="        + (gpsLng ?? "null"),
+    "gps_lat=" + (gpsLat ?? "null"),
+    "gps_lng=" + (gpsLng ?? "null"),
     "prev_chain_hash=" + prevChainHash,
   ].join("|");
-  const hmac      = hmacSign(payload);
+  const hmac = hmacSign(payload);
   const chainHash = sha256hex(Buffer.from(prevChainHash + ":" + imageHash + ":" + readingKwh + ":" + serverTs + ":" + userId));
   return { payload, hmac, chainHash };
 }
@@ -174,19 +145,16 @@ app.post("/api/admin/login", (req, res) => {
   res.json({ token: hmacSign(ADMIN_PASSWORD) });
 });
 
-// --- Admin: all readings ---
 app.get("/api/admin/readings", requireAdmin, (req, res) => {
   const rows = db.getAllReadings();
   res.json(rows.map(r => ({
-    ...r,
-    fraudFlags:   Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
+    ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
     aiValidation: r.ai_validation || {},
-    imagePath:    "/api/images/" + r.image_path,
+    imagePath: "/api/images/" + r.image_path,
     proof: { payload: r.proof_payload, hmac: r.proof_hmac },
   })));
 });
 
-// --- Admin: delete one reading ---
 app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   const row = db.findReadingByIdAdmin(req.params.id);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -197,47 +165,30 @@ app.delete("/api/admin/readings/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Admin: WIPE ALL data ---
 app.delete("/api/admin/wipe", requireAdmin, (req, res) => {
   try {
     const readings = db.getAllReadings();
-    readings.forEach(r => {
-      const diskPath = path.join(IMAGES_DIR, r.image_path);
-      if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
-    });
+    readings.forEach(r => { const p = path.join(IMAGES_DIR, r.image_path); if (fs.existsSync(p)) fs.unlinkSync(p); });
     const statements = db.getAllStatements();
-    statements.forEach(s => {
-      const diskPath = path.join(STMTS_DIR, s.image_path);
-      if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
-    });
-    db.deleteAllReadings();
-    db.clearStatements();
-    db.clearAudit();
+    statements.forEach(s => { const p = path.join(STMTS_DIR, s.image_path); if (fs.existsSync(p)) fs.unlinkSync(p); });
+    db.deleteAllReadings(); db.clearStatements(); db.clearAudit();
     auditLog("ADMIN_WIPE_ALL", "admin", { readingsDeleted: readings.length, statementsDeleted: statements.length }, req.ip);
-    res.json({ ok: true, message: "All data wiped. Ready for fresh testing.", readingsDeleted: readings.length, statementsDeleted: statements.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.json({ ok: true, message: "All data wiped.", readingsDeleted: readings.length, statementsDeleted: statements.length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Admin: delete all readings only ---
 app.delete("/api/admin/readings", requireAdmin, (req, res) => {
   const rows = db.getAllReadings();
-  rows.forEach(r => {
-    const diskPath = path.join(IMAGES_DIR, r.image_path);
-    if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
-  });
+  rows.forEach(r => { const p = path.join(IMAGES_DIR, r.image_path); if (fs.existsSync(p)) fs.unlinkSync(p); });
   db.deleteAllReadings();
   auditLog("ADMIN_DELETE_ALL_READINGS", "admin", { count: rows.length }, req.ip);
   res.json({ ok: true, deleted: rows.length });
 });
 
-// --- Admin: audit log ---
 app.get("/api/admin/audit", requireAdmin, (req, res) => { res.json(db.getAudit()); });
 app.delete("/api/admin/audit", requireAdmin, (req, res) => { db.clearAudit(); res.json({ ok: true }); });
-
-// --- Admin: statements ---
 app.get("/api/admin/statements", requireAdmin, (req, res) => { res.json(db.getAllStatements()); });
+
 app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   const row = db.findStatementByIdAdmin(req.params.id);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -247,7 +198,6 @@ app.delete("/api/admin/statements/:id", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Serve meter photo ---
 app.get("/api/images/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(IMAGES_DIR, filename);
@@ -263,8 +213,8 @@ app.post("/api/readings/preview", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
     const imageHash = sha256hex(req.file.buffer);
-    const extraction = await extractReading(req.file.buffer, req.file.mimetype);
-    res.json({ imageHash, aiReading: extraction.reading, meterNumber: extraction.meterNumber, extraction });
+    const analysis = await analyzeMeterlImage(req.file.buffer, req.file.mimetype);
+    res.json({ imageHash, aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -272,87 +222,80 @@ app.post("/api/readings/extract-only", upload.single("photo"), async (req, res) 
   if (!req.file) return res.status(400).json({ error: "No photo" });
   try {
     const imageHash = sha256hex(req.file.buffer);
-    const extraction = await extractReading(req.file.buffer, req.file.mimetype);
-    res.json({ imageHash, aiReading: extraction.reading, meterNumber: extraction.meterNumber, extraction });
+    const analysis = await analyzeMeterlImage(req.file.buffer, req.file.mimetype);
+    res.json({ imageHash, aiReading: analysis.reading, meterNumber: analysis.meterNumber, extraction: analysis });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- MAIN CAPTURE ENDPOINT ---
 app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
-
-  const serverTs          = Date.now();
-  const clientTs          = parseInt(req.body.clientTimestamp, 10) || serverTs;
-  const gpsLat            = req.body.gpsLat  ? parseFloat(req.body.gpsLat)  : null;
-  const gpsLng            = req.body.gpsLng  ? parseFloat(req.body.gpsLng)  : null;
-  const userConfirmed     = req.body.confirmedReading ? parseFloat(req.body.confirmedReading) : null;
+  const serverTs = Date.now();
+  const clientTs = parseInt(req.body.clientTimestamp, 10) || serverTs;
+  const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat) : null;
+  const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng) : null;
+  const userConfirmed = req.body.confirmedReading ? parseFloat(req.body.confirmedReading) : null;
   const manualMeterNumber = req.body.meterNumber || null;
 
   auditLog("CAPTURE_ATTEMPT", req.userId, { bytes: req.file.size }, req.ip);
 
   try {
     const imageHash = sha256hex(req.file.buffer);
-
     if (db.findReadingByHash(imageHash)) {
       return res.status(409).json({ error: "This photo has already been submitted" });
     }
 
-    // STEP 1: Save image to disk immediately
+    // Save image immediately
     const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
     fs.writeFileSync(imageDiskPath, req.file.buffer);
-
     const writtenHash = sha256hex(fs.readFileSync(imageDiskPath));
     if (writtenHash !== imageHash) {
       fs.unlinkSync(imageDiskPath);
       return res.status(500).json({ error: "Image storage verification failed" });
     }
 
-    // STEP 2: Validate image authenticity
-    const { flags, criticalFlags, validation } = await validateMeterImage(req.file.buffer, req.file.mimetype, clientTs);
-
-    if (criticalFlags.length > 0) {
-      fs.unlinkSync(imageDiskPath);
-      auditLog("FRAUD_BLOCKED", req.userId, { criticalFlags }, req.ip);
-      return res.status(422).json({ error: "Photo failed authenticity check", reason: criticalFlags[0].replace("CRITICAL: ", ""), flags });
-    }
-
-    // STEP 3: Extract reading + meter number
-    let extraction = { reading: null, meterNumber: null, rawText: "", confidence: 0 };
+    // SINGLE AI call: validate + extract together
+    const flags = [];
+    let analysis = { isElectricityMeter: true, isPhotoOfScreen: false, isEdited: false, reading: null, meterNumber: null, confidence: 0 };
     let aiTimedOut = false;
+
     try {
-      extraction = await extractReading(fs.readFileSync(imageDiskPath), req.file.mimetype);
+      analysis = await analyzeMeterlImage(req.file.buffer, req.file.mimetype);
     } catch (aiErr) {
-      console.error("[EXTRACTION FAILED]", aiErr.message);
+      console.error("[AI FAILED]", aiErr.message);
       aiTimedOut = aiErr.message.startsWith("AI_TIMEOUT");
     }
 
-    const aiReading     = extraction.reading;
-    const aiMeterNumber = extraction.meterNumber;
+    // Check fraud flags from combined analysis
+    if (analysis.isPhotoOfScreen) flags.push("CRITICAL: Photo of a screen");
+    if (analysis.isEdited) flags.push("CRITICAL: Digital editing detected");
+    if (analysis.isPhotoOfScreen === true || analysis.isEdited === true) {
+      fs.unlinkSync(imageDiskPath);
+      auditLog("FRAUD_BLOCKED", req.userId, { flags }, req.ip);
+      return res.status(422).json({ error: "Photo failed authenticity check", reason: flags[0]?.replace("CRITICAL: ", ""), flags });
+    }
 
-    // STEP 4: Determine final reading value
+    const aiReading = analysis.reading;
+    const aiMeterNumber = analysis.meterNumber;
+
+    // Determine final reading
     let finalReading, readingSource;
     if (userConfirmed !== null && !isNaN(userConfirmed) && userConfirmed > 0) {
-      finalReading  = userConfirmed;
+      finalReading = userConfirmed;
       readingSource = (aiReading !== null && Math.abs(userConfirmed - aiReading) < 0.5) ? "AI_CONFIRMED" : "AI_CORRECTED";
     } else if (aiReading !== null) {
-      finalReading  = aiReading;
+      finalReading = aiReading;
       readingSource = "AI_CONFIRMED";
     } else {
       return res.status(202).json({
-        status:      "manual_required",
-        imageHash,
-        imageSaved:  true,
-        aiTimedOut,
+        status: "manual_required", imageHash, imageSaved: true, aiTimedOut,
         meterNumber: aiMeterNumber || null,
-        message:     "Photo saved and secured. AI could not read the meter. Please enter the reading manually.",
+        message: "Photo saved. AI could not read the meter — please enter the reading manually.",
       });
     }
 
-    // STEP 5: Determine final meter number
     const finalMeterNumber = manualMeterNumber || aiMeterNumber || null;
-
-    // STEP 6: Chain + sign
     if (finalReading < 0) flags.push("Negative reading");
     const last = db.getLastReading(req.userId);
     if (last && finalReading < last.reading_kwh) flags.push("Reading " + finalReading + " below previous " + last.reading_kwh);
@@ -363,43 +306,28 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
       gpsLat, gpsLng, prevChainHash,
     });
 
-    // STEP 7: Persist record
     const id = "r_" + serverTs + "_" + crypto.randomBytes(4).toString("hex");
     const reading = {
-      id,
-      user_id:          req.userId,
-      server_ts:        serverTs,
-      client_ts:        clientTs,
-      reading_kwh:      finalReading,
-      ai_reading_kwh:   aiReading,
-      reading_source:   readingSource,
-      meter_number:     finalMeterNumber,
-      image_hash:       imageHash,
-      image_path:       imageFilename,
-      image_size_bytes: req.file.size,
-      image_mime:       req.file.mimetype,
-      gps_lat:          gpsLat,
-      gps_lng:          gpsLng,
-      ai_validation:    validation,
-      fraud_flags:      flags,
-      prev_chain_hash:  prevChainHash,
-      chain_hash:       chainHash,
-      proof_hmac:       proofHmac,
-      proof_payload:    proofPayload,
+      id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs,
+      reading_kwh: finalReading, ai_reading_kwh: aiReading, reading_source: readingSource,
+      meter_number: finalMeterNumber, image_hash: imageHash, image_path: imageFilename,
+      image_size_bytes: req.file.size, image_mime: req.file.mimetype,
+      gps_lat: gpsLat, gps_lng: gpsLng,
+      ai_validation: analysis, fraud_flags: flags,
+      prev_chain_hash: prevChainHash, chain_hash: chainHash,
+      proof_hmac: proofHmac, proof_payload: proofPayload,
     };
     db.insertReading(reading);
     auditLog("CAPTURE_SUCCESS", req.userId, { id, reading: finalReading, hash: imageHash, meterNumber: finalMeterNumber }, req.ip);
 
     res.json({
       id, reading: finalReading, aiReading, readingSource,
-      meterNumber:       finalMeterNumber,
+      meterNumber: finalMeterNumber,
       meterNumberSource: manualMeterNumber ? "manual" : (aiMeterNumber ? "ai" : "unknown"),
-      serverTs, imageHash, chainHash,
-      fraudFlags:  flags,
-      imagePath:   "/api/images/" + imageFilename,
+      serverTs, imageHash, chainHash, fraudFlags: flags,
+      imagePath: "/api/images/" + imageFilename,
       proof: { payload: proofPayload, hmac: proofHmac },
     });
-
   } catch (err) {
     auditLog("CAPTURE_ERROR", req.userId, { error: err.message }, req.ip);
     console.error("[CAPTURE ERROR]", err);
@@ -407,89 +335,60 @@ app.post("/api/readings/capture", upload.single("photo"), async (req, res) => {
   }
 });
 
-// --- PATCH: manual reading ---
+// --- Manual reading ---
 app.patch("/api/readings/manual", upload.single("photo"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No photo" });
-
-  const serverTs          = Date.now();
-  const clientTs          = parseInt(req.body.clientTimestamp, 10) || serverTs;
-  const manualReading     = parseFloat(req.body.confirmedReading);
+  const serverTs = Date.now();
+  const clientTs = parseInt(req.body.clientTimestamp, 10) || serverTs;
+  const manualReading = parseFloat(req.body.confirmedReading);
   const manualMeterNumber = req.body.meterNumber || null;
-  const gpsLat            = req.body.gpsLat ? parseFloat(req.body.gpsLat) : null;
-  const gpsLng            = req.body.gpsLng ? parseFloat(req.body.gpsLng) : null;
-
+  const gpsLat = req.body.gpsLat ? parseFloat(req.body.gpsLat) : null;
+  const gpsLng = req.body.gpsLng ? parseFloat(req.body.gpsLng) : null;
   if (!manualReading || isNaN(manualReading) || manualReading <= 0) {
     return res.status(400).json({ error: "Valid reading required" });
   }
-
   try {
-    const imageHash     = sha256hex(req.file.buffer);
+    const imageHash = sha256hex(req.file.buffer);
     const imageFilename = imageHash + ".jpg";
     const imageDiskPath = path.join(IMAGES_DIR, imageFilename);
-
-    if (!fs.existsSync(imageDiskPath)) {
-      fs.writeFileSync(imageDiskPath, req.file.buffer);
-    }
-
+    if (!fs.existsSync(imageDiskPath)) fs.writeFileSync(imageDiskPath, req.file.buffer);
     const last = db.getLastReading(req.userId);
     const prevChainHash = last ? last.chain_hash : "genesis";
     const { payload: proofPayload, hmac: proofHmac, chainHash } = buildProof({
       userId: req.userId, serverTs, imageHash,
-      readingKwh: manualReading, aiReadingKwh: null,
-      gpsLat, gpsLng, prevChainHash,
+      readingKwh: manualReading, aiReadingKwh: null, gpsLat, gpsLng, prevChainHash,
     });
-
     const id = "r_" + serverTs + "_" + crypto.randomBytes(4).toString("hex");
     const reading = {
-      id,
-      user_id:          req.userId,
-      server_ts:        serverTs,
-      client_ts:        clientTs,
-      reading_kwh:      manualReading,
-      ai_reading_kwh:   null,
-      reading_source:   "MANUAL",
-      meter_number:     manualMeterNumber,
-      image_hash:       imageHash,
-      image_path:       imageFilename,
-      image_size_bytes: req.file.size,
-      image_mime:       req.file.mimetype,
-      gps_lat:          gpsLat,
-      gps_lng:          gpsLng,
-      ai_validation:    {},
-      fraud_flags:      [],
-      prev_chain_hash:  prevChainHash,
-      chain_hash:       chainHash,
-      proof_hmac:       proofHmac,
-      proof_payload:    proofPayload,
+      id, user_id: req.userId, server_ts: serverTs, client_ts: clientTs,
+      reading_kwh: manualReading, ai_reading_kwh: null, reading_source: "MANUAL",
+      meter_number: manualMeterNumber, image_hash: imageHash, image_path: imageFilename,
+      image_size_bytes: req.file.size, image_mime: req.file.mimetype,
+      gps_lat: gpsLat, gps_lng: gpsLng, ai_validation: {}, fraud_flags: [],
+      prev_chain_hash: prevChainHash, chain_hash: chainHash,
+      proof_hmac: proofHmac, proof_payload: proofPayload,
     };
     db.insertReading(reading);
     auditLog("MANUAL_READING", req.userId, { id, reading: manualReading, meterNumber: manualMeterNumber, hash: imageHash }, req.ip);
-
     res.json({
       id, reading: manualReading, readingSource: "MANUAL",
-      meterNumber: manualMeterNumber,
-      serverTs, imageHash, chainHash,
+      meterNumber: manualMeterNumber, serverTs, imageHash, chainHash,
       imagePath: "/api/images/" + imageFilename,
       proof: { payload: proofPayload, hmac: proofHmac },
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- Get readings for user ---
 app.get("/api/readings", (req, res) => {
   const rows = db.getReadings(req.userId);
   res.json(rows.map(r => ({
-    ...r,
-    fraudFlags:   Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
+    ...r, fraudFlags: Array.isArray(r.fraud_flags) ? r.fraud_flags : [],
     aiValidation: r.ai_validation || {},
-    imagePath:    "/api/images/" + r.image_path,
+    imagePath: "/api/images/" + r.image_path,
     proof: { payload: r.proof_payload, hmac: r.proof_hmac },
   })));
 });
 
-// --- Verify a single reading ---
 app.get("/api/readings/:id/verify", (req, res) => {
   const row = db.findReadingById(req.params.id, req.userId);
   if (!row) return res.status(404).json({ error: "Not found" });
@@ -501,7 +400,11 @@ app.get("/api/readings/:id/verify", (req, res) => {
   } else {
     checks.push({ name: "Image file integrity", pass: false, detail: "File missing" });
   }
-  const { hmac: recomputed } = buildProof({ userId: row.user_id, serverTs: row.server_ts, imageHash: row.image_hash, readingKwh: row.reading_kwh, aiReadingKwh: row.ai_reading_kwh, gpsLat: row.gps_lat, gpsLng: row.gps_lng, prevChainHash: row.prev_chain_hash });
+  const { hmac: recomputed } = buildProof({
+    userId: row.user_id, serverTs: row.server_ts, imageHash: row.image_hash,
+    readingKwh: row.reading_kwh, aiReadingKwh: row.ai_reading_kwh,
+    gpsLat: row.gps_lat, gpsLng: row.gps_lng, prevChainHash: row.prev_chain_hash
+  });
   checks.push({ name: "HMAC proof", pass: recomputed === row.proof_hmac, detail: recomputed === row.proof_hmac ? "Valid" : "TAMPERED" });
   const prev = db.getReadingsBefore(req.userId, row.server_ts)[0];
   const expectedPrev = prev ? prev.chain_hash : "genesis";
@@ -509,38 +412,45 @@ app.get("/api/readings/:id/verify", (req, res) => {
   res.json({ id: row.id, pass: checks.every(c => c.pass), checks, proofPayload: row.proof_payload });
 });
 
-// --- Upload statement ---
 app.post("/api/statements/upload", upload.single("statement"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file" });
   try {
     const imageHash = sha256hex(req.file.buffer);
     fs.writeFileSync(path.join(STMTS_DIR, imageHash + "_stmt.jpg"), req.file.buffer);
-    const b64  = req.file.buffer.toString("base64");
+    const b64 = req.file.buffer.toString("base64");
     const resp = await withTimeout(
       anthropic.messages.create({
         model: MODEL, max_tokens: 1200,
         system: "Parse South African municipal electricity bills. Return only valid JSON, no markdown.",
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-          { type: "text",  text: 'Parse this bill. Return JSON:\n{"accountNumber":"string or null","billingPeriodStart":"YYYY-MM-DD or null","billingPeriodEnd":"YYYY-MM-DD or null","openingReading":"number or null","closingReading":"number or null","unitsConsumed":"number or null","readingType":"ACTUAL or ESTIMATED or UNKNOWN","amountDue":"number or null","currency":"ZAR","municipality":"string or null","notes":"key observations"}' }
+          { type: "text", text: 'Parse this bill. Return JSON:\n{"accountNumber":"string or null","billingPeriodStart":"YYYY-MM-DD or null","billingPeriodEnd":"YYYY-MM-DD or null","openingReading":"number or null","closingReading":"number or null","unitsConsumed":"number or null","readingType":"ACTUAL or ESTIMATED or UNKNOWN","amountDue":"number or null","currency":"ZAR","municipality":"string or null","notes":"key observations"}' }
         ]}]
       }),
       30000, "statement-parse"
     );
-    const text   = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
+    const text = resp.content.filter(b => b.type === "text").map(b => b.text).join("");
     const parsed = JSON.parse(text.replace(/```json?|```/g, "").trim());
-    const id     = "s_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
-    db.insertStatement({ id, user_id: req.userId, server_ts: Date.now(), image_hash: imageHash, image_path: imageHash + "_stmt.jpg", billing_start: parsed.billingPeriodStart, billing_end: parsed.billingPeriodEnd, opening_kwh: parsed.openingReading, closing_kwh: parsed.closingReading, units_consumed: parsed.unitsConsumed, reading_type: parsed.readingType, amount_due: parsed.amountDue, currency: parsed.currency || "ZAR", municipality: parsed.municipality, account_number: parsed.accountNumber, raw_json: JSON.stringify(parsed) });
+    const id = "s_" + Date.now() + "_" + crypto.randomBytes(4).toString("hex");
+    db.insertStatement({
+      id, user_id: req.userId, server_ts: Date.now(),
+      image_hash: imageHash, image_path: imageHash + "_stmt.jpg",
+      billing_start: parsed.billingPeriodStart, billing_end: parsed.billingPeriodEnd,
+      opening_kwh: parsed.openingReading, closing_kwh: parsed.closingReading,
+      units_consumed: parsed.unitsConsumed, reading_type: parsed.readingType,
+      amount_due: parsed.amountDue, currency: parsed.currency || "ZAR",
+      municipality: parsed.municipality, account_number: parsed.accountNumber,
+      raw_json: JSON.stringify(parsed)
+    });
     res.json({ id, imageHash, ...parsed });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get("/api/statements", (req, res) => { res.json(db.getStatements(req.userId)); });
 
-// --- Compare readings vs statement ---
 app.post("/api/compare", async (req, res) => {
   try {
-    const readings   = db.getReadings(req.userId, 60);
+    const readings = db.getReadings(req.userId, 60);
     const statements = db.getStatements(req.userId);
     if (!readings.length || !statements.length) return res.status(400).json({ error: "Need both readings and statements" });
     const rSummary = readings.map(r => ({ date: new Date(r.server_ts).toISOString().slice(0,10), reading_kwh: r.reading_kwh, source: r.reading_source }));
