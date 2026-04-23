@@ -9,7 +9,7 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize DB with safety logic
+// Initialize DB with internal safety checks
 const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
