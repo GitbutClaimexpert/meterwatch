@@ -14,14 +14,14 @@ const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
 
-// 1. ENABLE CORS: Allows the Vercel frontend and mobile app to talk to Railway without being blocked
+// 1. ENABLE CORS: Crucial so your mobile app can talk to the server without being blocked
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// 2. INCREASE PAYLOAD LIMIT: Crucial for high-res 5MB+ iPhone photos
+// 2. INCREASE PAYLOAD LIMIT: Needed for high-res 5MB+ iPhone photos
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -29,7 +29,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
 /**
- * AI Logic: Resizes large images on the fly and reads analog drum digits left-to-right.
+ * AI Logic: Resizes photos if they are too big and uses Sonnet 3.5 to read the digits
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
@@ -38,7 +38,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Auto-resize high-res photos (anything > 4MB) to stay under AI API limits
+    // Server-side resize for large iPhone photos to stay under AI API limits
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -67,7 +67,7 @@ async function analyzeMeterImage(base64Data) {
     clearTimeout(timeoutId);
     return JSON.parse(response.content[0].text);
   } catch (err) {
-    console.error("AI Analysis error:", err);
+    console.error("AI Error:", err);
     return { isElectricityMeter: true, reading: null, confidence: "low" };
   }
 }
@@ -101,18 +101,14 @@ app.delete("/api/admin/wipe", async (req, res) => {
   }
 });
 
-// --- STATIC FRONTEND DELIVERY (MUST BE LAST) ---
+// --- FRONTEND CATCH-ALL (MUST BE LAST) ---
 
 app.use(express.static(FRONTEND_DIST, { index: false }));
 
 app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ error: "API not found" });
-  }
+  if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`[MeterWatch] Backend active on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
