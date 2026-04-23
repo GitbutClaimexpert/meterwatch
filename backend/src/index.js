@@ -14,7 +14,7 @@ const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
 
-// 1. ENABLE CORS: Allows the Vercel frontend and mobile app to talk to Railway
+// 1. ENABLE CORS: Allows the Vercel frontend and mobile app to talk to Railway without being blocked
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
@@ -29,7 +29,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
 /**
- * AI Logic: Resizes large images on the fly and reads analog drum digits
+ * AI Logic: Resizes large images on the fly and reads analog drum digits left-to-right.
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
