@@ -9,19 +9,19 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Database logic
+// Initialize DB
 const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
 
-// Enable CORS so the Vercel frontend can talk to this Railway backend
+// Enable CORS for all origins to allow Vercel and Mobile access
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Increase payload limit to handle 5MB+ iPhone photos
+// Increase payload limit for high-res iPhone photos
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -30,7 +30,7 @@ const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 const ADMIN_HTML = path.join(__dirname, "admin.html");
 
 /**
- * Handles image processing and AI extraction
+ * Processes the image: Resizes if too large, then sends to Claude 3.5 Sonnet
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
@@ -39,7 +39,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Server-side resize for large iPhone photos to stay under AI limits
+    // Server-side resize for large iPhone photos (> 4MB)
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -48,7 +48,7 @@ async function analyzeMeterImage(base64Data) {
     }
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20240620", // High accuracy for analog meters
+      model: "claude-3-5-sonnet-20240620", 
       max_tokens: 400,
       messages: [{
         role: "user",
@@ -59,7 +59,7 @@ async function analyzeMeterImage(base64Data) {
           },
           { 
             type: "text", 
-            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY valid JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
+            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
           }
         ],
       }],
@@ -68,19 +68,15 @@ async function analyzeMeterImage(base64Data) {
     clearTimeout(timeoutId);
     return JSON.parse(response.content[0].text);
   } catch (err) {
-    console.error("AI processing error:", err);
+    console.error("AI Analysis Error:", err);
     return { isElectricityMeter: true, reading: null, confidence: "low" };
   }
 }
 
-// --- API ENDPOINTS ---
+// --- API ROUTES ---
 
 app.get("/api/ping", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
-});
-
-app.get("/mw-admin", (req, res) => {
-  res.sendFile(ADMIN_HTML);
 });
 
 app.post("/api/readings/capture", async (req, res) => {
@@ -111,13 +107,9 @@ app.delete("/api/admin/wipe", async (req, res) => {
 app.use(express.static(FRONTEND_DIST, { index: false }));
 
 app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ error: "API not found" });
-  }
+  if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`[MeterWatch] Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
