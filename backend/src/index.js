@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import Anthropic from "@anthropic-ai/sdk";
@@ -24,17 +23,16 @@ const ADMIN_HTML = path.join(__dirname, "admin.html");
 
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout [cite: 2200]
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
     let buffer = Buffer.from(base64Data, "base64");
-    // Server-side resize for large iPhone photos [cite: 2447, 2452]
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer).resize(1800, 1800, { fit: "inside" }).jpeg({ quality: 85 }).toBuffer();
     }
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20240620", // Sonnet 3.5 for analog meter accuracy [cite: 2576, 2580]
+      model: "claude-3-5-sonnet-20240620", 
       max_tokens: 400,
       messages: [{
         role: "user",
@@ -52,18 +50,13 @@ async function analyzeMeterImage(base64Data) {
   }
 }
 
-// --- API ROUTES FIRST ---
-app.get("/api/ping", (req, res) => res.json({ ok: true, ts: new Date().toISOString() })); // [cite: 2169, 2174]
-app.get("/mw-admin", (req, res) => res.sendFile(ADMIN_HTML)); // [cite: 1550, 1558]
+// --- API ROUTES MUST BE ABOVE STATIC FILES ---
+app.get("/api/ping", (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.get("/mw-admin", (req, res) => res.sendFile(ADMIN_HTML));
 
 app.post("/api/readings/capture", async (req, res) => {
   const aiResult = await analyzeMeterImage(req.body.photo);
-  const reading = { 
-    id: "rd_" + Date.now(), 
-    ts: new Date().toISOString(), 
-    reading_kwh: aiResult.reading, 
-    status: aiResult.reading ? "confirmed" : "manual_required" 
-  };
+  const reading = { id: "rd_" + Date.now(), ts: new Date().toISOString(), reading_kwh: aiResult.reading, status: aiResult.reading ? "confirmed" : "manual_required" };
   await db.insertReading(reading);
   res.json(reading);
 });
@@ -75,8 +68,9 @@ app.delete("/api/admin/wipe", (req, res) => {
   res.json({ success: true });
 });
 
-// --- FRONTEND LAST ---
-app.use(express.static(FRONTEND_DIST, { index: false })); // [cite: 1527, 1540]
+// --- STATIC FILES AND CATCH-ALL MUST BE LAST ---
+app.use(express.static(FRONTEND_DIST, { index: false }));
+
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
