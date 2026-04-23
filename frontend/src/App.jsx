@@ -1,57 +1,78 @@
+import React, { useState, useRef } from 'react';
 
-export class JsonDB {
-  constructor(filePath) { this.filePath = filePath; this._load(); }
+const API_URL = "https://meterwatch-production.up.railway.app";
 
-  _load() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        this.data = JSON.parse(fs.readFileSync(this.filePath, "utf8"));
-        // Guard all arrays — existing DB files may be missing keys
-        if (!Array.isArray(this.data.readings))   this.data.readings   = [];
-        if (!Array.isArray(this.data.audit))       this.data.audit      = [];
-        if (!Array.isArray(this.data.statements))  this.data.statements = [];
-      } else {
-        this.data = { readings: [], audit: [], statements: [] };
-        this._save();
+function App() {
+  const [photo, setPhoto] = useState(null);
+  const [reading, setReading] = useState(null);
+  const [isValidating, setValidating] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // This function takes the photo and sends it to your Railway backend
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Data = reader.result.split(',')[1];
+      setPhoto(reader.result);
+      setValidating(true);
+      setReading(null);
+
+      try {
+        const response = await fetch(`${API_URL}/api/readings/capture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo: base64Data }) // Matches your backend req.body.photo
+        });
+
+        const data = await response.json();
+        if (data.reading_kwh) {
+          setReading(data.reading_kwh);
+        } else {
+          alert("AI couldn't read the digits. Try a clearer photo.");
+        }
+      } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Server connection failed. Check Railway logs.");
+      } finally {
+        setValidating(false);
       }
-    } catch (e) {
-      console.error("[DB] Load error:", e.message);
-      this.data = { readings: [], audit: [], statements: [] };
-    }
-  }
+    };
+    reader.readAsDataURL(file);
+  };
 
-  _save() {
-    try { fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2)); }
-    catch (e) { console.error("[DB] Save error:", e.message); }
-  }
+  return (
+    <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1>MeterWatch</h1>
+      
+      <div style={{ margin: '20px 0' }}>
+        <button 
+          onClick={() => fileInputRef.current.click()}
+          style={{ padding: '15px 30px', fontSize: '18px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '8px' }}
+        >
+          {isValidating ? "Validating..." : "📷 Take Meter Photo"}
+        </button>
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload} 
+          style={{ display: 'none' }} 
+        />
+      </div>
 
-  // ── Readings ────────────────────────────────────────────────────────────
-  insertReading(reading)          { this._load(); this.data.readings.push(reading); this._save(); }
-  getReadings(userId, limit = 200){ this._load(); return this.data.readings.filter(r => r.user_id === userId).sort((a,b) => b.server_ts - a.server_ts).slice(0, limit); }
-  getAllReadings()                 { this._load(); return this.data.readings.sort((a,b) => b.server_ts - a.server_ts); }
-  getLastReading(userId)          { this._load(); return this.data.readings.filter(r => r.user_id === userId).sort((a,b) => b.server_ts - a.server_ts)[0] || null; }
-  getReadingsBefore(userId, ts)   { this._load(); return this.data.readings.filter(r => r.user_id === userId && r.server_ts < ts).sort((a,b) => b.server_ts - a.server_ts); }
-  findReadingByHash(hash)         { this._load(); return this.data.readings.find(r => r.image_hash === hash) || null; }
-  findReadingById(id, userId)     { this._load(); return this.data.readings.find(r => r.id === id && r.user_id === userId) || null; }
-  findReadingByIdAdmin(id)        { this._load(); return this.data.readings.find(r => r.id === id) || null; }
-  deleteReading(id)               { this._load(); this.data.readings = this.data.readings.filter(r => r.id !== id); this._save(); }
-  deleteAllReadings()             { this._load(); this.data.readings = []; this._save(); }
-
-  // ── Statements ──────────────────────────────────────────────────────────
-  insertStatement(stmt)           { this._load(); this.data.statements.push(stmt); this._save(); }
-  getStatements(userId)           { this._load(); return this.data.statements.filter(s => s.user_id === userId).sort((a,b) => b.server_ts - a.server_ts); }
-  getAllStatements()               { this._load(); return this.data.statements.sort((a,b) => b.server_ts - a.server_ts); }
-  findStatementByIdAdmin(id)      { this._load(); return this.data.statements.find(s => s.id === id) || null; }
-  deleteStatement(id)             { this._load(); this.data.statements = this.data.statements.filter(s => s.id !== id); this._save(); }
-  clearStatements()               { this._load(); this.data.statements = []; this._save(); }
-
-  // ── Audit ────────────────────────────────────────────────────────────────
-  insertAudit(entry) {
-    this._load();
-    this.data.audit.push(entry);
-    if (this.data.audit.length > 1000) this.data.audit = this.data.audit.slice(-1000);
-    this._save();
-  }
-  getAudit()   { this._load(); return this.data.audit.sort((a,b) => b.server_ts - a.server_ts); }
-  clearAudit() { this._load(); this.data.audit = []; this._save(); }
+      {photo && <img src={photo} alt="Meter" style={{ width: '100%', maxWidth: '300px', borderRadius: '10px' }} />}
+      
+      {reading && (
+        <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f1f1f1', borderRadius: '10px' }}>
+          <h2>Reading: <span style={{ color: '#27ae60' }}>{reading} kWh</span></h2>
+        </div>
+      )}
+    </div>
+  );
 }
+
+export default App;
