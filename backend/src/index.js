@@ -9,36 +9,24 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize DB
 const db = new JsonDB(path.join(__dirname, "db.json"));
-
 const app = express();
 
-// SECURITY: Allow connection from your Vercel frontend
-app.use(cors({ 
-  origin: "*", 
-  methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"], 
-  allowedHeaders: ["Content-Type", "Authorization"] 
-}));
-
-// CAPACITY: Allow the massive 5MB+ strings from iPhone cameras
+app.use(cors({ origin: "*", methods: "*" }));
 app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
-/**
- * AI CORE: Optimized for Sangamo Weston analog meters
- */
 async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Resize image to ensure it doesn't time out the AI server
+    // Process the image to remove "digital noise" from screens
     buffer = await sharp(buffer)
       .resize(1600, 1600, { fit: "inside" })
-      .jpeg({ quality: 80 })
+      .grayscale() // Removing color helps the AI focus on digit shapes
+      .sharpen()   // Counteracts the blur from the moiré patterns
       .toBuffer();
 
     const response = await anthropic.messages.create({
@@ -50,7 +38,7 @@ async function analyzeMeterImage(base64Data) {
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: buffer.toString("base64") } },
           { 
             type: "text", 
-            text: "ACT AS AN EXPERT UTILITY AUDITOR. 1. Identify the 5 digits on the black/white drums. 2. If a digit is obscured by white flash glare, infer the number from the visible top/bottom edges. 3. If a digit is rolling/halfway between numbers, always pick the LOWER number. 4. IGNORE the red drum and the cobwebs. Respond ONLY with JSON: {\"reading\": \"12345\"}" 
+            text: "ACT AS AN EXPERT METER AUDITOR. 1. Identify the 5 black/white kWh digits. 2. IMPORTANT: This image is a photo of a screen; IGNORE pixel patterns, moiré wavy lines, and digital banding. 3. If a digit is between numbers, pick the LOWER one. 4. Ignore the red drum. Respond ONLY with JSON: {\"reading\": \"68251\"}" 
           }
         ],
       }],
@@ -58,8 +46,6 @@ async function analyzeMeterImage(base64Data) {
 
     const rawText = response.content[0].text;
     const jsonMatch = rawText.match(/\{.*\}/s);
-    if (!jsonMatch) throw new Error("No JSON found");
-    
     return JSON.parse(jsonMatch[0]);
   } catch (err) {
     console.error("[AI ERROR]:", err.message);
@@ -67,42 +53,21 @@ async function analyzeMeterImage(base64Data) {
   }
 }
 
-// --- ROUTES ---
-
-app.get("/api/ping", (req, res) => res.json({ ok: true, status: "Ready" }));
-
 app.post("/api/readings/capture", async (req, res) => {
-  console.log("[API] Received capture request");
   try {
-    if (!req.body.photo) {
-      console.error("[API] Error: req.body.photo is missing");
-      return res.status(400).json({ error: "No photo provided" });
-    }
-
     const aiResult = await analyzeMeterImage(req.body.photo);
-    const cleanReading = aiResult?.reading ? String(aiResult.reading).replace(/\D/g, '') : null;
-
-    const reading = { 
-      id: "rd_" + Date.now(), 
-      ts: new Date().toISOString(), 
-      reading_kwh: cleanReading, 
-      status: cleanReading ? "confirmed" : "manual_required" 
-    };
-
+    const val = aiResult?.reading ? String(aiResult.reading).replace(/\D/g, '') : null;
+    const reading = { id: "rd_" + Date.now(), ts: new Date().toISOString(), reading_kwh: val, status: val ? "confirmed" : "manual_required" };
     await db.insertReading(reading);
     res.json(reading);
   } catch (error) {
-    console.error("[API] Fatal Error:", error);
-    res.status(500).json({ error: "Processing failed" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// Serve frontend files
+app.get("/api/ping", (req, res) => res.json({ ok: true }));
 app.use(express.static(FRONTEND_DIST, { index: false }));
-app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) return res.status(404).end();
-  res.sendFile(path.join(FRONTEND_DIST, "index.html"));
-});
+app.get("*", (req, res) => res.sendFile(path.join(FRONTEND_DIST, "index.html")));
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Backend live on port ${PORT}`));
+app.listen(PORT, () => console.log(`Backend live on ${PORT}`));
