@@ -22,10 +22,10 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Resize to help AI process faster and stay under limits
+    // Resize to help the AI focus on the drum digits
     buffer = await sharp(buffer)
-      .resize(1500, 1500, { fit: "inside" })
-      .jpeg({ quality: 80 })
+      .resize(1600, 1600, { fit: "inside" })
+      .jpeg({ quality: 85 })
       .toBuffer();
 
     const response = await anthropic.messages.create({
@@ -37,7 +37,13 @@ async function analyzeMeterImage(base64Data) {
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: buffer.toString("base64") } },
           { 
             type: "text", 
-            text: "ACT AS AN EXPERT METER READER. 1. Identify the 5 black/white kWh digits. 2. If a digit is between numbers, choose the LOWER one. 3. IGNORE the red drum. 4. IGNORE cobwebs and glare. Respond ONLY with this JSON: {\"reading\": \"12345\"}" 
+            text: `ACT AS AN EXPERT UTILITY AUDITOR. 
+            Analyze this analog electro-mechanical meter (cyclometer type).
+            1. Identify the 5 digits on the black/white drums.
+            2. If a digit is obscured by white flash glare on the glass, infer the number from the remaining visible edges.
+            3. If a digit is rolling/halfway between two numbers, always pick the LOWER number.
+            4. IGNORE the red decimal drum on the right.
+            5. Respond ONLY with this JSON: {"reading": "12345"}` 
           }
         ],
       }],
@@ -47,12 +53,10 @@ async function analyzeMeterImage(base64Data) {
     const jsonMatch = rawText.match(/\{.*\}/s);
     return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.error("AI Error:", err);
+    console.error("Analysis Error:", err);
     return { reading: null };
   }
 }
-
-app.get("/api/ping", (req, res) => res.json({ ok: true }));
 
 app.post("/api/readings/capture", async (req, res) => {
   try {
@@ -69,9 +73,11 @@ app.post("/api/readings/capture", async (req, res) => {
     await db.insertReading(reading);
     res.json(reading);
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server failed to process image" });
   }
 });
+
+app.get("/api/ping", (req, res) => res.json({ ok: true }));
 
 app.use(express.static(FRONTEND_DIST, { index: false }));
 app.get("*", (req, res) => {
@@ -80,4 +86,4 @@ app.get("*", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server on ${PORT}`));
+app.listen(PORT, () => console.log(`Backend running on ${PORT}`));
