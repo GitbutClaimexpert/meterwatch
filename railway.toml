@@ -1,14 +1,6 @@
 [build]
 builder = "nixpacks"
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_20"]
-
-[build.nixpacksPlan.phases.install]
-cmds = ["cd backend && npm install"]
-
-[build.nixpacksPlan.phases.build]
-cmds = ["echo 'backend only'"]
+buildCommand = "cd backend && npm install"
 
 [deploy]
 startCommand = "cd backend && node src/index.js"
