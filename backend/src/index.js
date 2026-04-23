@@ -19,62 +19,46 @@ const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
 async function analyzeMeterImage(base64Data) {
   try {
-    console.log("[STEP 1] Converting Base64 to Buffer...");
     let buffer = Buffer.from(base64Data, "base64");
     
-    console.log("[STEP 2] Processing with Sharp...");
+    // AGGRESSIVE COMPRESSION: Shrink to 800px to kill digital noise/moiré
     buffer = await sharp(buffer)
-      .resize(1200, 1200, { fit: "inside" })
+      .resize(800, 800, { fit: "inside" })
       .grayscale()
+      .normalize() // Improves contrast significantly
       .toBuffer();
 
-    console.log("[STEP 3] Sending to Claude AI...");
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20240620", 
-      max_tokens: 500,
+      max_tokens: 100, // Small tokens for faster response
       messages: [{
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: buffer.toString("base64") } },
-          { type: "text", text: "Read the 5 kWh digits. Choose lower if between. IGNORE digital screen lines. Respond ONLY JSON: {\"reading\": \"12345\"}" }
+          { type: "text", text: "Read the 5 black/white kWh digits. Ignore glare, screen lines, and cobwebs. Choose the lower number if rolling. Respond ONLY with JSON: {\"reading\": \"12345\"}" }
         ],
       }],
     });
 
     const rawText = response.content[0].text;
-    console.log("[STEP 4] AI Raw Response:", rawText);
-
     const jsonMatch = rawText.match(/\{.*\}/s);
-    if (!jsonMatch) throw new Error("AI did not return JSON format");
-    
     return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.error("[AI FATAL ERROR]:", err.message);
+    console.error("AI Error:", err.message);
     return { reading: null };
   }
 }
 
 app.post("/api/readings/capture", async (req, res) => {
-  console.log("[API] Capture Triggered");
   try {
-    if (!req.body.photo) throw new Error("Request body missing 'photo' key");
-    
+    if (!req.body.photo) return res.status(400).json({ error: "Missing photo" });
     const aiResult = await analyzeMeterImage(req.body.photo);
     const val = aiResult?.reading ? String(aiResult.reading).replace(/\D/g, '') : null;
-
-    const reading = { 
-      id: "rd_" + Date.now(), 
-      ts: new Date().toISOString(), 
-      reading_kwh: val, 
-      status: val ? "confirmed" : "manual_required" 
-    };
-
+    const reading = { id: "rd_" + Date.now(), ts: new Date().toISOString(), reading_kwh: val, status: val ? "confirmed" : "manual_required" };
     await db.insertReading(reading);
-    console.log("[API] Success! Saved:", val);
     res.json(reading);
   } catch (error) {
-    console.error("[API ERROR]:", error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Server Error" });
   }
 });
 
@@ -83,4 +67,4 @@ app.use(express.static(FRONTEND_DIST, { index: false }));
 app.get("*", (req, res) => res.sendFile(path.join(FRONTEND_DIST, "index.html")));
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server ready on ${PORT}`));
+app.listen(PORT, () => console.log(`Live on ${PORT}`));
