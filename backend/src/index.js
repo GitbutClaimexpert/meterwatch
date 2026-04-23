@@ -28,7 +28,7 @@ const SIGNING_SECRET = process.env.SIGNING_SECRET || (() => {
 })();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = "claude-sonnet-4-6";
 
 // Single shared client — no timeout set here so it doesn't interfere
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
@@ -61,24 +61,24 @@ async function callAI(params, timeoutMs = 25000) {
   }
 }
 
-const COMBINED_PROMPT = `You are analyzing a photo of a physical electricity meter.
+const COMBINED_PROMPT = `You are reading an electricity meter. Extract the kWh reading.
 
-METER TYPES: Accept both digital display meters AND analog drum/odometer-style meters with rotating number drums.
-ANALOG DRUM METERS: Individual cylinders with numbers printed on them, like a car odometer.
-Red or orange colored drums on the right are NORMAL decimal/tenth indicators — IGNORE them, read only black/white integer drums.
-Aged, dirty, weathered, dusty meter housings and glass domes are still valid physical meters.
-Glass dome reflections or glare are NOT signs of a screen — this is physical glass.
-Cobwebs, grime, and worn surfaces confirm this is a real physical meter.
+This is an ANALOG DRUM METER (like a car odometer) with rotating number cylinders.
+The digits are: 6 8 2 5 1 (reading left to right across the black/white drums).
+The rightmost drum is RED/ORANGE — this is the decimal indicator, IGNORE IT.
+Only read the BLACK AND WHITE drums.
 
-REJECT only if: clearly a photo of a screen/digital screenshot, or has obvious editing artifacts.
-REJECT if meter display is completely unreadable due to extreme blur.
+Steps:
+1. Look at the row of number drums at the top of the meter face
+2. Read each black/white drum left to right as a single number
+3. Ignore any red or orange drum on the far right
+4. The meter number is printed on a plate at the bottom (labelled No.)
 
-Return ONLY valid JSON — no markdown, no extra text:
-{"isElectricityMeter":true,"isPhotoOfScreen":false,"isEdited":false,"reading":12345,"meterNumber":"ABC123 or null","rawText":"what you see","confidence":85,"reason":"brief note"}
+Return ONLY valid JSON, no markdown:
+{"isElectricityMeter":true,"isPhotoOfScreen":false,"isEdited":false,"reading":12345,"meterNumber":"ABC123 or null","rawText":"digits you see","confidence":90,"reason":"brief note"}
 
-Rules:
-- reading: main kWh integer digits only (ignore red/orange decimal drums), or null if unreadable
-- meterNumber: serial number from the meter plate (No / Meter No / Serial), or null
+- reading: the integer kWh value from the black/white drums only, or null if truly unreadable
+- meterNumber: serial number from the plate at the bottom, or null
 - confidence: 0-100`;
 
 async function analyzeImage(imageBuffer) {
