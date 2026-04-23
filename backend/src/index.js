@@ -14,7 +14,7 @@ const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
 
-// 1. ENABLE CORS: Crucial so your mobile app can talk to the server without being blocked
+// 1. ENABLE CORS: Allows the Vercel frontend and mobile app to talk to Railway without being blocked
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
@@ -67,7 +67,7 @@ async function analyzeMeterImage(base64Data) {
     clearTimeout(timeoutId);
     return JSON.parse(response.content[0].text);
   } catch (err) {
-    console.error("AI Error:", err);
+    console.error("AI processing error:", err);
     return { isElectricityMeter: true, reading: null, confidence: "low" };
   }
 }
@@ -111,4 +111,4 @@ app.get("*", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server active on port ${PORT}`));
