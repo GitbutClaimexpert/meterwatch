@@ -14,14 +14,14 @@ const db = new JsonDB(path.join(__dirname, "db.json"));
 
 const app = express();
 
-// 1. ENABLE CORS: This stops the "Blocked by CORS" errors in the browser console
+// 1. ENABLE CORS: Allows the Vercel frontend and mobile browser to talk to Railway
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// 2. PAYLOAD LIMITS: Allows the server to receive 5MB+ high-res images
+// 2. INCREASE PAYLOAD LIMIT: Crucial for high-res 5MB+ iPhone photos
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -30,7 +30,7 @@ const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 const ADMIN_HTML = path.join(__dirname, "admin.html");
 
 /**
- * AI Logic: Resizes image to stay under API limits and extracts digits from analog drums
+ * AI Logic: Resizes photos if they exceed 4MB and uses Sonnet 3.5 to read digits.
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
@@ -39,7 +39,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Server-side resize for large iPhone photos (anything > 4MB)
+    // Server-side resize for large iPhone photos to stay under AI API limits
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -68,7 +68,7 @@ async function analyzeMeterImage(base64Data) {
     clearTimeout(timeoutId);
     return JSON.parse(response.content[0].text);
   } catch (err) {
-    console.error("AI processing error:", err);
+    console.error("AI Error:", err);
     return { isElectricityMeter: true, reading: null, confidence: "low" };
   }
 }
@@ -102,7 +102,7 @@ app.delete("/api/admin/wipe", async (req, res) => {
   }
 });
 
-// --- FRONTEND CATCH-ALL (MUST BE THE LAST LINES) ---
+// --- FRONTEND CATCH-ALL (MUST BE THE VERY LAST LINES) ---
 
 app.use(express.static(FRONTEND_DIST, { index: false }));
 
@@ -114,6 +114,4 @@ app.get("*", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`[MeterWatch] Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
