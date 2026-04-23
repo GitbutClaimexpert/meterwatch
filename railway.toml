@@ -5,7 +5,7 @@ builder = "nixpacks"
 nixPkgs = ["nodejs_20"]
 
 [build.nixpacksPlan.phases.install]
-cmds = ["cd backend && npm install && cd ../frontend && npm install"]
+cmds = ["cd backend && npm install", "cd frontend && npm install"]
 
 [build.nixpacksPlan.phases.build]
 cmds = ["cd frontend && npm run build"]
