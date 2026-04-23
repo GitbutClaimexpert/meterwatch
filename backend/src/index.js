@@ -9,22 +9,28 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize DB with safety guards
 const db = new JsonDB(path.join(__dirname, "db.json"));
+
 const app = express();
 
-// FIX: Allows the mobile app to talk to the server without being blocked
+// 1. ENABLE CORS: Crucial so your mobile app can talk to Railway without being blocked
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// FIX: Allows high-res 5MB+ iPhone photos to be uploaded
+// 2. INCREASE PAYLOAD LIMIT: Needed for high-res 5MB+ iPhone photos
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
+/**
+ * AI Logic: Resizes large images on the fly and reads analog drum digits
+ */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -32,7 +38,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // FIX: Shrinks huge photos so the AI doesn't time out or reject them
+    // Auto-resize high-res photos (anything > 4MB) to stay under AI API limits
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -66,7 +72,11 @@ async function analyzeMeterImage(base64Data) {
   }
 }
 
-app.get("/api/ping", (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+// --- API ROUTES ---
+
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
 
 app.post("/api/readings/capture", async (req, res) => {
   const aiResult = await analyzeMeterImage(req.body.photo);
@@ -80,11 +90,27 @@ app.post("/api/readings/capture", async (req, res) => {
   res.json(reading);
 });
 
+app.delete("/api/admin/wipe", async (req, res) => {
+  try {
+    db.data.readings = [];
+    db.data.audit = [];
+    await db.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Wipe failed" });
+  }
+});
+
+// --- FRONTEND DELIVERY (MUST BE LAST) ---
+
 app.use(express.static(FRONTEND_DIST, { index: false }));
+
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`[MeterWatch] Backend active on port ${PORT}`);
+});
