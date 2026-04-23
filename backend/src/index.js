@@ -9,27 +9,24 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize DB with safety guards
 const db = new JsonDB(path.join(__dirname, "db.json"));
-
 const app = express();
 
-// 1. FIXED CORS: Allows the frontend and mobile app to talk to this server
+// FIX 1: Allow Vercel and iPhone browsers to talk to this server
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// 2. FIXED LIMITS: Allows the server to receive high-res 5MB+ iPhone photos
+// FIX 2: Allow large high-res photos (up to 50MB) to be uploaded
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
 /**
- * FIXED IMAGE LOGIC: Resizes large photos to stay under AI API limits
+ * FIX 3: Server-side resizing for 5MB+ iPhone photos
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
@@ -38,7 +35,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Auto-resize high-res iPhone photos (anything > 4MB)
+    // Resize images over 4MB so the AI doesn't reject them
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -58,7 +55,7 @@ async function analyzeMeterImage(base64Data) {
           },
           { 
             type: "text", 
-            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY valid JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
+            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
           }
         ],
       }],
@@ -72,11 +69,8 @@ async function analyzeMeterImage(base64Data) {
   }
 }
 
-// --- API ROUTES ---
-
-app.get("/api/ping", (req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
-});
+// API Routes
+app.get("/api/ping", (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 app.post("/api/readings/capture", async (req, res) => {
   const aiResult = await analyzeMeterImage(req.body.photo);
@@ -91,28 +85,18 @@ app.post("/api/readings/capture", async (req, res) => {
 });
 
 app.delete("/api/admin/wipe", async (req, res) => {
-  try {
-    db.data.readings = [];
-    db.data.audit = [];
-    await db.save();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Wipe failed" });
-  }
+  db.data.readings = [];
+  db.data.audit = [];
+  await db.save();
+  res.json({ success: true });
 });
 
-// --- STATIC FRONTEND DELIVERY (MUST BE LAST) ---
-
+// Static Hosting (Catch-all)
 app.use(express.static(FRONTEND_DIST, { index: false }));
-
 app.get("*", (req, res) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ error: "API not found" });
-  }
+  if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
