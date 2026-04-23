@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 
 export class JsonDB {
   constructor(filePath) { this.filePath = filePath; this._load(); }
