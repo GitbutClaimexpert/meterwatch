@@ -9,24 +9,27 @@ import { JsonDB } from "./db.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize DB with internal safety checks
 const db = new JsonDB(path.join(__dirname, "db.json"));
+
 const app = express();
 
-// FIX 1: Allow Vercel and iPhone browsers to talk to this server
+// 1. ENABLE CORS: Crucial so the mobile app can talk to the server without being blocked
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// FIX 2: Allow large high-res photos (up to 50MB) to be uploaded
+// 2. INCREASE PAYLOAD LIMIT: Needed for high-res 5MB+ iPhone photos
 app.use(express.json({ limit: "50mb" }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 const FRONTEND_DIST = path.join(__dirname, "../../frontend/dist");
 
 /**
- * FIX 3: Server-side resizing for 5MB+ iPhone photos
+ * AI Logic: Resizes photos if they are too big and uses Sonnet 3.5 to read the digits
  */
 async function analyzeMeterImage(base64Data) {
   const controller = new AbortController();
@@ -35,7 +38,7 @@ async function analyzeMeterImage(base64Data) {
   try {
     let buffer = Buffer.from(base64Data, "base64");
     
-    // Resize images over 4MB so the AI doesn't reject them
+    // Server-side resize for large iPhone photos to stay under AI API limits
     if (buffer.length > 4 * 1024 * 1024) {
       buffer = await sharp(buffer)
         .resize(1800, 1800, { fit: "inside" })
@@ -55,7 +58,7 @@ async function analyzeMeterImage(base64Data) {
           },
           { 
             type: "text", 
-            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
+            text: "Read this analog drum meter. Read BLACK/WHITE drums left-to-right. IGNORE red drum. Respond ONLY valid JSON: {\"isElectricityMeter\": true, \"reading\": \"12345\", \"confidence\": \"high\"}" 
           }
         ],
       }],
@@ -69,8 +72,11 @@ async function analyzeMeterImage(base64Data) {
   }
 }
 
-// API Routes
-app.get("/api/ping", (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+// --- API ROUTES ---
+
+app.get("/api/ping", (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
 
 app.post("/api/readings/capture", async (req, res) => {
   const aiResult = await analyzeMeterImage(req.body.photo);
@@ -85,14 +91,20 @@ app.post("/api/readings/capture", async (req, res) => {
 });
 
 app.delete("/api/admin/wipe", async (req, res) => {
-  db.data.readings = [];
-  db.data.audit = [];
-  await db.save();
-  res.json({ success: true });
+  try {
+    db.data.readings = [];
+    db.data.audit = [];
+    await db.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Wipe failed" });
+  }
 });
 
-// Static Hosting (Catch-all)
+// --- FRONTEND CATCH-ALL (MUST BE LAST) ---
+
 app.use(express.static(FRONTEND_DIST, { index: false }));
+
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) return res.status(404).json({ error: "API not found" });
   res.sendFile(path.join(FRONTEND_DIST, "index.html"));
