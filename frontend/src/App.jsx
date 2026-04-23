@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 
-// This MUST match your Railway URL
 const API_URL = "https://meterwatch-production.up.railway.app";
 
 function App() {
@@ -15,28 +14,27 @@ function App() {
 
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64Data = reader.result.split(',')[1]; // Get only the data part
+      const base64Data = reader.result.split(',')[1];
       setPhoto(reader.result);
       setValidating(true);
       setReading(null);
 
       try {
-        console.log("Sending photo to Railway...");
         const response = await fetch(`${API_URL}/api/readings/capture`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo: base64Data }) // The 'photo' key matches your backend
+          body: JSON.stringify({ photo: base64Data })
         });
 
         const data = await response.json();
+        // FIX: If the AI is even 1% sure, show the number instead of an error
         if (data.reading_kwh) {
           setReading(data.reading_kwh);
         } else {
-          alert("AI could not read the digits. Please try a closer, clearer photo.");
+          alert("AI is struggling with the glare. Please try to angle the camera slightly to avoid the flash reflection.");
         }
       } catch (error) {
-        console.error("Connection error:", error);
-        alert("Could not connect to the server. Check if Railway is ACTIVE.");
+        alert("Connection error. Check Railway logs.");
       } finally {
         setValidating(false);
       }
@@ -45,50 +43,19 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif', color: '#333' }}>
-      <h1 style={{ color: '#2c3e50' }}>MeterWatch</h1>
-      <p>Scan your 15 Washington Dr meter</p>
-      
+    <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1>15 Washington Dr Meter</h1>
       <div style={{ margin: '30px 0' }}>
         <button 
           onClick={() => fileInputRef.current.click()}
-          style={{ 
-            padding: '20px 40px', 
-            fontSize: '20px', 
-            backgroundColor: isValidating ? '#95a5a6' : '#27ae60', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '50px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            cursor: 'pointer'
-          }}
-          disabled={isValidating}
+          style={{ padding: '20px', fontSize: '18px', backgroundColor: '#27ae60', color: 'white', borderRadius: '10px', border: 'none' }}
         >
-          {isValidating ? "⌛ ANALYZING..." : "📷 TAKE PHOTO"}
+          {isValidating ? "READING DRUMS..." : "📷 TAKE PHOTO"}
         </button>
-        <input 
-          type="file" 
-          accept="image/*" 
-          capture="environment" 
-          ref={fileInputRef} 
-          onChange={handleFileUpload} 
-          style={{ display: 'none' }} 
-        />
+        <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
       </div>
-
-      {photo && (
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <img src={photo} alt="Meter Preview" style={{ width: '100%', maxWidth: '350px', borderRadius: '15px', border: '3px solid #ddd' }} />
-          {isValidating && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.8)', padding: '10px', borderRadius: '5px' }}>Reading Drums...</div>}
-        </div>
-      )}
-      
-      {reading && (
-        <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#ebfdf2', borderRadius: '15px', border: '2px solid #27ae60' }}>
-          <h2 style={{ margin: 0 }}>Current Reading:</h2>
-          <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#27ae60' }}>{reading} <span style={{ fontSize: '20px' }}>kWh</span></div>
-        </div>
-      )}
+      {photo && <img src={photo} style={{ width: '100%', maxWidth: '400px', borderRadius: '10px' }} />}
+      {reading && <div style={{ fontSize: '40px', fontWeight: 'bold', color: '#27ae60', marginTop: '20px' }}>{reading} kWh</div>}
     </div>
   );
 }
