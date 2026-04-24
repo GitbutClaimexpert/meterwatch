@@ -10,7 +10,7 @@ function App() {
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => console.log("GPS access denied")
+      () => console.log("GPS Denied")
     );
   }, []);
 
@@ -23,21 +23,21 @@ function App() {
       const img = new Image();
       img.src = event.target.result;
       img.onload = async () => {
-        // --- COMPRESSION LOGIC ---
+        // Canvas compression to keep file size small
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
+        const MAX_SIZE = 1000;
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
           }
         } else {
-          if (height > MAX_WIDTH) {
-            width *= MAX_WIDTH / height;
-            height = MAX_WIDTH;
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
           }
         }
 
@@ -46,11 +46,11 @@ function App() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Convert to a smaller JPEG
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
-        // -------------------------
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
         setLoading(true);
+        setResult(null);
+
         try {
           const res = await fetch(`${API_URL}/api/readings/capture`, {
             method: 'POST',
@@ -61,10 +61,11 @@ function App() {
               lng: location.lng 
             })
           });
+          
           const data = await res.json();
           setResult(data);
         } catch (err) {
-          alert("Size error still present. Check backend limits.");
+          alert("Server error. Check Railway logs.");
         } finally {
           setLoading(false);
         }
@@ -76,24 +77,32 @@ function App() {
   return (
     <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
       <h1 style={{ color: '#2c3e50' }}>15 Washington Dr</h1>
-      <p style={{ fontSize: '12px', color: '#95a5a6' }}>
-        GPS: {location.lat ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "Searching..."}
-      </p>
-
-      <div style={{ margin: '20px 0' }}>
-        <input type="file" accept="image/*" capture="environment" onChange={handleCapture} id="camera" style={{ display: 'none' }} />
-        <label htmlFor="camera" style={{ padding: '20px 40px', backgroundColor: '#3498db', color: 'white', borderRadius: '10px', cursor: 'pointer', display: 'inline-block' }}>
-          {loading ? "SHRINKING & ANALYZING..." : "📷 SCAN & RECORD"}
+      
+      <div style={{ marginBottom: '30px' }}>
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment" 
+          onChange={handleCapture} 
+          id="cam-input" 
+          style={{ display: 'none' }} 
+        />
+        <label htmlFor="cam-input" style={{ 
+          padding: '20px 40px', backgroundColor: '#3498db', color: 'white', 
+          borderRadius: '12px', cursor: 'pointer', display: 'inline-block', fontSize: '18px'
+        }}>
+          {loading ? "⌛ ANALYZING..." : "📷 TAKE PHOTO"}
         </label>
       </div>
 
       {result && (
-        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ddd', borderRadius: '10px', textAlign: 'left' }}>
-          <h2 style={{ color: result.confidence === 'high' ? '#27ae60' : '#e67e22' }}>
-            Reading: {result.reading_kwh} kWh
+        <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '12px', textAlign: 'left', border: '1px solid #ddd' }}>
+          <h2 style={{ color: result.confidence === 'high' ? '#27ae60' : '#e67e22', marginTop: 0 }}>
+            Reading: {result.reading_kwh}
           </h2>
-          <p><strong>Confidence:</strong> {result.confidence.toUpperCase()}</p>
-          <p><strong>AI Notes:</strong> {result.notes}</p>
+          <p><strong>Confidence:</strong> {result.confidence}</p>
+          <p><strong>Notes:</strong> {result.notes}</p>
+          <p style={{ fontSize: '10px', color: '#999' }}>Time: {new Date(result.timestamp).toLocaleString()}</p>
         </div>
       )}
     </div>
